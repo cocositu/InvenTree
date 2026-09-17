@@ -51,7 +51,7 @@ msgstr "此字段的值必须是唯一的。"
 
 #: InvenTree/api.py:614
 msgid "Item no longer matches the provided criteria"
-msgstr ""
+msgstr "项目已不再符合提供的条件"
 
 #: InvenTree/api.py:861 InvenTree/models.py:1459
 msgid "User does not have permission to view this model"
@@ -99,7 +99,7 @@ msgstr "提供的数量无效"
 
 #: InvenTree/exceptions.py:128
 msgid "Server is temporarily reloading, please retry the request"
-msgstr ""
+msgstr "服务器正在临时重载，请重试该请求"
 
 #: InvenTree/exceptions.py:161
 msgid "Error details can be found in the admin panel"
@@ -1017,7 +1017,7 @@ msgstr "产出与生产订单不匹配"
 
 #: build/models.py:1370 build/models.py:1448
 msgid "Build output has already been completed"
-msgstr ""
+msgstr "生产产出已完成"
 
 #: build/models.py:1380 build/models.py:1481 build/serializers.py:321
 #: build/serializers.py:375 build/serializers.py:918 build/serializers.py:1726
@@ -1049,7 +1049,7 @@ msgstr "存在已分配物料时无法部分完成生产输出"
 #: order/serializers.py:2848 stock/models.py:1494 stock/models.py:1898
 #: stock/models.py:2121 stock/models.py:2444 stock/models.py:2738
 msgid "Stock item no longer exists"
-msgstr ""
+msgstr "库存项已不存在"
 
 #: build/models.py:1676 build/serializers.py:966 order/serializers.py:1775
 #: order/serializers.py:2804
@@ -1823,7 +1823,7 @@ msgstr "这条消息的工作完成了吗？"
 
 #: common/models.py:1730
 msgid "Optional explicit URL associated with this notification"
-msgstr ""
+msgstr "与此通知关联的可选显式 URL"
 
 #: common/models.py:1770
 msgid "Id"
@@ -2197,15 +2197,15 @@ msgstr "参数模板"
 
 #: common/models.py:2662
 msgid "No uniqueness required"
-msgstr ""
+msgstr "不要求唯一"
 
 #: common/models.py:2663
 msgid "Unique for model type"
-msgstr ""
+msgstr "按模型类型唯一"
 
 #: common/models.py:2664
 msgid "Globally unique"
-msgstr ""
+msgstr "全局唯一"
 
 #: common/models.py:2691
 msgid "Checkbox parameters cannot have units"
@@ -2273,11 +2273,11 @@ msgstr "此参数模板是否启用？"
 
 #: common/models.py:2812
 msgid "Uniqueness"
-msgstr ""
+msgstr "唯一性"
 
 #: common/models.py:2814
 msgid "Enforce uniqueness of linked parameter values against this template"
-msgstr ""
+msgstr "强制关联参数值相对此模板的唯一性"
 
 #: common/models.py:2856
 msgid "Parameter"
@@ -2293,7 +2293,7 @@ msgstr "无效的参数值选择"
 
 #: common/models.py:3007
 msgid "Parameter value must be unique"
-msgstr ""
+msgstr "参数值必须唯一"
 
 #: common/models.py:3016 common/serializers.py:940
 msgid "Invalid model type specified for parameter"
@@ -3541,11 +3541,11 @@ msgstr "生成调拨单编号字段所需的编码格式模板"
 
 #: common/setting/system.py:955
 msgid "Edit Completed Transfer Orders"
-msgstr ""
+msgstr "编辑已完成的调拨单"
 
 #: common/setting/system.py:957
 msgid "Allow editing of transfer orders after they have been completed"
-msgstr ""
+msgstr "允许在调拨单完成后继续编辑"
 
 #: common/setting/system.py:963
 msgid "Block Incomplete Item Tests"
@@ -3589,11 +3589,11 @@ msgstr "当收到所有行项目时，自动将采购订单标记为完成"
 
 #: common/setting/system.py:1007
 msgid "Merge Purchase Order Line Items"
-msgstr ""
+msgstr "合并采购订单行项目"
 
 #: common/setting/system.py:1009
 msgid "Merge new purchase order line items with existing lines that share the same part, destination, and target date"
-msgstr ""
+msgstr "将新的采购订单行项目与零件、目标地和目标日期相同的现有行合并"
 
 #: common/setting/system.py:1016
 msgid "Enable password forgot"
@@ -4113,11 +4113,11 @@ msgstr "在搜索预览窗口的每个部分中显示的结果数"
 
 #: common/setting/user.py:163
 msgid "Search Results Preview Panel"
-msgstr ""
+msgstr "搜索结果预览面板"
 
 #: common/setting/user.py:165
 msgid "Open search results in the preview panel, rather than navigating directly to the result"
-msgstr ""
+msgstr "在预览面板中打开搜索结果，而不是直接跳转到结果"
 
 #: common/setting/user.py:171
 msgid "Regex Search"
@@ -4897,7 +4897,7 @@ msgstr "打开数据文件失败"
 
 #: importer/operations.py:55
 msgid "Could not decode data file as text"
-msgstr ""
+msgstr "无法将数据文件解码为文本"
 
 #: importer/operations.py:62
 msgid "Invalid data file dimensions"
@@ -5484,11 +5484,11 @@ msgstr "项目数量"
 
 #: order/models.py:2190
 msgid "Discount"
-msgstr ""
+msgstr "折扣"
 
 #: order/models.py:2191
 msgid "Discount percentage applied to this line item (0-100)"
-msgstr ""
+msgstr "应用于此行项目的折扣百分比（0-100）"
 
 #: order/models.py:2209
 msgid "Line Number"
@@ -6007,7 +6007,7 @@ msgstr "提供的条形码值必须是唯一的"
 
 #: order/serializers.py:1075
 msgid "Supplied serial numbers must be unique"
-msgstr ""
+msgstr "提供的序列号必须唯一"
 
 #: order/serializers.py:1217
 msgid "Shipments"
@@ -7491,7 +7491,7 @@ msgstr "找到多个匹配的供应商零件"
 
 #: plugin/base/barcodes/api.py:448 plugin/base/barcodes/api.py:508
 msgid "You do not have the required permissions for purchase orders"
-msgstr ""
+msgstr "您没有采购订单所需的权限"
 
 #: plugin/base/barcodes/api.py:458 plugin/base/barcodes/api.py:761
 msgid "No matching plugin found for barcode data"
@@ -7527,7 +7527,7 @@ msgstr "未找到匹配的行项目"
 
 #: plugin/base/barcodes/api.py:749
 msgid "You do not have the required permissions for sales orders"
-msgstr ""
+msgstr "您没有销售订单所需的权限"
 
 #: plugin/base/barcodes/api.py:758
 msgid "No sales order provided"
@@ -8213,7 +8213,7 @@ msgstr "作为‘TME’的供应商"
 
 #: plugin/installer.py:44
 msgid "Pip is not installed in the current environment"
-msgstr ""
+msgstr "当前环境中未安装 Pip"
 
 #: plugin/installer.py:243 plugin/installer.py:348 plugin/serializers.py:169
 #: plugin/serializers.py:275
@@ -8226,7 +8226,7 @@ msgstr "插件安装已禁用"
 
 #: plugin/installer.py:267
 msgid "Invalid URL and no package name provided"
-msgstr ""
+msgstr "URL 无效且未提供包名"
 
 #: plugin/installer.py:276
 msgid "No package name or URL provided for installation"

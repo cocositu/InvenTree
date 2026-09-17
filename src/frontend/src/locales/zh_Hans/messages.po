@@ -28,7 +28,7 @@ msgstr "渲染组件出错"
 
 #: lib/components/Boundary.tsx:20
 msgid "An error occurred while rendering this component."
-msgstr ""
+msgstr "渲染此组件时发生错误。"
 
 #: lib/components/Boundary.tsx:23
 msgid "Try reloading the page, or contact your administrator if the problem persists."
@@ -4397,15 +4397,15 @@ msgstr "{model} 视图"
 
 #: src/components/tables/InvenTreeTableHeader.tsx:130
 msgid "No items selected"
-msgstr ""
+msgstr "未选择任何项目"
 
 #: src/components/tables/InvenTreeTableHeader.tsx:132
 msgid "1 selected item will be deleted"
-msgstr ""
+msgstr "将删除 1 个选定项目"
 
 #: src/components/tables/InvenTreeTableHeader.tsx:134
 msgid "{N} selected items will be deleted"
-msgstr ""
+msgstr "将删除 {N} 个选定项目"
 
 #: src/components/tables/InvenTreeTableHeader.tsx:140
 msgid "Delete Selected Items"
@@ -4497,7 +4497,7 @@ msgstr "包括变体库存"
 
 #: src/components/tables/PartStockCell.tsx:106
 msgid "Direct stock"
-msgstr ""
+msgstr "直接库存"
 
 #: src/components/tables/bom/BomTable.tsx:200
 #~ msgid "Validate"
@@ -11186,7 +11186,7 @@ msgstr "查看项目"
 #: src/tables/sales/ReturnOrderLineItemTable.tsx:154
 #: src/tables/sales/SalesOrderLineItemTable.tsx:127
 msgid "Discount"
-msgstr ""
+msgstr "折扣"
 
 #: src/tables/general/ExtraLineItemTable.tsx:102
 #: src/tables/purchasing/PurchaseOrderLineItemTable.tsx:303
@@ -11722,11 +11722,11 @@ msgstr "查看销售订单"
 
 #: src/tables/part/PartSalesOrdersTable.tsx:94
 msgid "Show outstanding orders"
-msgstr ""
+msgstr "显示未结订单"
 
 #: src/tables/part/PartSalesOrdersTable.tsx:99
 msgid "Show completed line items"
-msgstr ""
+msgstr "显示已完成的行项目"
 
 #: src/tables/part/PartTable.tsx:214
 #: src/tables/part/PartTable.tsx:257
@@ -11883,7 +11883,7 @@ msgstr "按有可用库存的零件筛选"
 
 #: src/tables/part/PartTableFilters.tsx:150
 msgid "Filter by parts which are on order"
-msgstr ""
+msgstr "筛选已下单的零件"
 
 #: src/tables/part/PartTableFilters.tsx:156
 msgid "Filter by parts to which the user is subscribed"

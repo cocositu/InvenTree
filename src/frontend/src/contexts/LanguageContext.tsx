@@ -188,12 +188,54 @@ export function getPriorityLocale(): string {
   return userDefault || serverDefault || defaultLocale;
 }
 
+/**
+ * 将语言代码归一化为前端 locale 目录名。
+ *
+ * 背景：后端 Django 使用连字符形式的 BCP-47 码（`zh-hans` / `es-mx`），
+ * 而前端 locale 目录使用下划线形式（`zh_Hans` / `es_MX`）。
+ *
+ * 原实现直接 `locale.split('-')[0]`，把 `zh-hans` 截成 `zh`，但构建产物里
+ * 只有 `zh_Hans` 目录 → 动态 import 抛错被 catch 吞掉 → 界面静默回退英文。
+ * 这是「服务器默认语言设为中文却仍显示英文」的根因。
+ */
+export function normalizeLocaleDir(locale: string): string {
+  const supported = getSupportedLanguages();
+
+  // 1. 已经是受支持的键（用户在 UI 下拉里选择的格式）
+  if (supported[locale]) {
+    return locale;
+  }
+
+  // 2. 连字符 -> 下划线（zh-hans -> zh_Hans）
+  const underscored = locale.replace(/-/g, '_');
+  if (supported[underscored]) {
+    return underscored;
+  }
+
+  // 3. 忽略大小写匹配（zh_hans -> zh_Hans）
+  const lowered = underscored.toLowerCase();
+  const ciMatch = Object.keys(supported).find(
+    (key) => key.toLowerCase() === lowered
+  );
+  if (ciMatch) {
+    return ciMatch;
+  }
+
+  // 4. 退回到基础语言（de-DE -> de）
+  const base = underscored.split('_')[0].toLowerCase();
+  const baseMatch = Object.keys(supported).find(
+    (key) => key.split('_')[0].toLowerCase() === base
+  );
+
+  return baseMatch ?? underscored;
+}
+
 export async function activateLocale(locale: string | null) {
   if (!locale) {
     locale = getPriorityLocale();
   }
 
-  const localeDir = locale.split('-')[0]; // Extract the base locale (e.g., 'en' from 'en-US')
+  const localeDir = normalizeLocaleDir(locale);
 
   try {
     const { messages } = await import(`../locales/${localeDir}/messages.ts`);
