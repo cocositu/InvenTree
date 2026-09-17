@@ -2,10 +2,18 @@
 
 from django.conf import settings
 from django.urls import include, path, re_path
+from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.generic import RedirectView, TemplateView
 
-spa_view = ensure_csrf_cookie(TemplateView.as_view(template_name='web/index.html'))
+# The SPA shell (index.html) references content-hashed asset filenames which
+# change on every frontend build. If a browser caches this document and a new
+# build is deployed, the cached copy points at assets that no longer exist and
+# the application fails to boot. Serving it with `no-cache` forces the browser
+# to revalidate on every load, so a new deploy is always picked up.
+spa_view = ensure_csrf_cookie(
+    never_cache(TemplateView.as_view(template_name='web/index.html'))
+)
 
 
 def cui_compatibility_urls(base: str) -> list:

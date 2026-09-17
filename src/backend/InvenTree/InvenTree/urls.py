@@ -3,6 +3,8 @@
 Passes URL lookup downstream to each app as required.
 """
 
+import re
+
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
@@ -191,9 +193,22 @@ if settings.DJANGO_SILK_ENABLED:
     urlpatterns += [path('silk/', include('silk.urls', namespace='silk'))]
 
 # Send any unknown URLs to the index page
+#
+# NOTE: Static and media prefixes are deliberately excluded from this catch-all.
+#
+# Without the exclusion, a *missing* static file (e.g. a stale asset hash that a
+# browser still references from a cached index.html after a frontend rebuild) is
+# answered with a 302 redirect to the SPA instead of a 404. The browser then
+# follows that redirect for a <script type="module"> request, receives the app
+# shell as HTML, and the page appears to spontaneously reload and jump back to
+# the dashboard. Returning a real 404 lets the browser report the failure
+# honestly instead of silently reloading the application.
+_static_prefix = settings.STATIC_URL.strip('/')
+_media_prefix = settings.MEDIA_URL.strip('/')
+
 urlpatterns += [
     re_path(
-        r'^.*$',
+        rf'^(?!(?:{re.escape(_static_prefix)}|{re.escape(_media_prefix)})/).*$',
         RedirectView.as_view(url=f'/{settings.FRONTEND_URL_BASE}', permanent=False),
         name='index',
     )
