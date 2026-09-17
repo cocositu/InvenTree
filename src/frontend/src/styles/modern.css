@@ -1,0 +1,317 @@
+/* ==========================================================================
+ * InvenTree 现代化 UI 增强层
+ * --------------------------------------------------------------------------
+ * 设计原则：
+ *   1. 纯 CSS，不引入任何 JS 动画库 —— 零额外包体积、零运行时开销
+ *   2. 动效只使用 transform / opacity（走 GPU 合成层，不触发重排重绘）
+ *   3. 所有动效统一尊重 prefers-reduced-motion
+ *   4. 令牌集中在 :root，便于后续调整主题
+ *
+ * 作用范围：仅调整视觉表现与过渡，不改变任何组件结构与业务逻辑
+ * ========================================================================== */
+
+/* --------------------------------------------------------------------------
+ * 1. 设计令牌
+ * -------------------------------------------------------------------------- */
+:root {
+  /* 缓动曲线：ease-out-expo 风格，起始快、结尾稳，主观"跟手" */
+  --it-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --it-ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --it-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* 时长梯度 */
+  --it-dur-instant: 90ms;
+  --it-dur-fast: 140ms;
+  --it-dur-base: 200ms;
+  --it-dur-slow: 280ms;
+
+  /* 层次阴影：低透明度多层叠加，比单一深阴影更自然 */
+  --it-shadow-1: 0 1px 2px rgba(16, 24, 40, 0.05), 0 1px 3px rgba(16, 24, 40, 0.06);
+  --it-shadow-2: 0 2px 4px rgba(16, 24, 40, 0.05), 0 4px 12px rgba(16, 24, 40, 0.08);
+  --it-shadow-3: 0 8px 16px rgba(16, 24, 40, 0.08), 0 2px 6px rgba(16, 24, 40, 0.05);
+}
+
+[data-mantine-color-scheme='dark'] {
+  --it-shadow-1: 0 1px 2px rgba(0, 0, 0, 0.35), 0 1px 3px rgba(0, 0, 0, 0.3);
+  --it-shadow-2: 0 2px 4px rgba(0, 0, 0, 0.35), 0 4px 12px rgba(0, 0, 0, 0.4);
+  --it-shadow-3: 0 8px 16px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* --------------------------------------------------------------------------
+ * 2. 排版优化（中英文混排的关键）
+ * -------------------------------------------------------------------------- */
+html {
+  /* 让中文与拉丁字形渲染更细腻，避免笔画锯齿 */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  /* 中文正文行高比英文略大更易读 */
+  line-height: 1.55;
+}
+
+body {
+  /* 兜底字体栈，与 Mantine 主题保持一致 */
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI',
+    'PingFang SC', 'HarmonyOS Sans SC', 'Microsoft YaHei UI', 'Microsoft YaHei',
+    'Noto Sans SC', 'Source Han Sans SC', 'Hiragino Sans GB', 'Heiti SC',
+    Roboto, Helvetica, Arial, sans-serif,
+    'Apple Color Emoji', 'Segoe UI Emoji';
+}
+
+/* 数字使用等宽数字，表格/数量列不再跳动 */
+.mantine-datatable-table td,
+.mantine-datatable-table th,
+table td,
+table th {
+  font-variant-numeric: tabular-nums;
+}
+
+/* 选中文本配色跟随主色，观感更统一 */
+::selection {
+  background-color: var(--mantine-primary-color-light, rgba(34, 139, 230, 0.25));
+}
+
+/* --------------------------------------------------------------------------
+ * 3. 滚动条（细窄、悬停加深，不再抢视觉）
+ * -------------------------------------------------------------------------- */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--mantine-color-gray-4) transparent;
+}
+
+[data-mantine-color-scheme='dark'] * {
+  scrollbar-color: var(--mantine-color-dark-3) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--mantine-color-gray-4);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+  transition: background-color var(--it-dur-fast) linear;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--mantine-color-gray-5);
+}
+
+[data-mantine-color-scheme='dark'] ::-webkit-scrollbar-thumb {
+  background-color: var(--mantine-color-dark-3);
+}
+
+[data-mantine-color-scheme='dark'] ::-webkit-scrollbar-thumb:hover {
+  background-color: var(--mantine-color-dark-2);
+}
+
+/* --------------------------------------------------------------------------
+ * 4. 页面切换过渡
+ *    由 Layout.tsx 在 <Outlet /> 外层按 pathname 重新挂载触发
+ *    仅 opacity + translate3d，避免整页重排
+ * -------------------------------------------------------------------------- */
+.it-page-enter {
+  animation: it-page-in var(--it-dur-slow) var(--it-ease-out) both;
+}
+
+@keyframes it-page-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/* 侧边抽屉/详情页滑入 */
+.it-slide-in-right {
+  animation: it-slide-in-right var(--it-dur-base) var(--it-ease-out) both;
+}
+
+@keyframes it-slide-in-right {
+  from {
+    opacity: 0;
+    transform: translate3d(12px, 0, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/* --------------------------------------------------------------------------
+ * 5. 交互微动效
+ * -------------------------------------------------------------------------- */
+
+/* 按钮 / 图标按钮：按压缩放反馈 + 背景色渐变过渡 */
+.mantine-Button-root,
+.mantine-ActionIcon-root {
+  transition:
+    transform var(--it-dur-instant) var(--it-ease-out),
+    background-color var(--it-dur-fast) linear,
+    border-color var(--it-dur-fast) linear,
+    color var(--it-dur-fast) linear,
+    box-shadow var(--it-dur-base) var(--it-ease-out);
+}
+
+.mantine-Button-root:active:not([data-disabled]),
+.mantine-ActionIcon-root:active:not([data-disabled]) {
+  transform: scale(0.97);
+}
+
+/* 输入框：聚焦时轻微描边过渡，不再突兀 */
+.mantine-Input-input,
+.mantine-Select-input,
+.mantine-Textarea-input,
+.mantine-TextInput-input,
+.mantine-NumberInput-input {
+  transition:
+    border-color var(--it-dur-fast) linear,
+    box-shadow var(--it-dur-base) var(--it-ease-out);
+}
+
+/* 可点击卡片：悬停轻微抬升（仅 transform + shadow） */
+.it-card-interactive {
+  transition:
+    transform var(--it-dur-base) var(--it-ease-out),
+    box-shadow var(--it-dur-base) var(--it-ease-out),
+    border-color var(--it-dur-fast) linear;
+}
+
+.it-card-interactive:hover {
+  transform: translate3d(0, -2px, 0);
+  box-shadow: var(--it-shadow-2);
+}
+
+/* 表格行：悬停底色渐变，扫读时更舒适 */
+.mantine-datatable-table tbody tr {
+  transition: background-color var(--it-dur-fast) linear;
+}
+
+/* 链接：hover 下划线渐显 */
+.it-link-underline {
+  background-image: linear-gradient(currentColor, currentColor);
+  background-position: 0% 100%;
+  background-repeat: no-repeat;
+  background-size: 0% 1px;
+  transition: background-size var(--it-dur-base) var(--it-ease-out);
+}
+
+.it-link-underline:hover {
+  background-size: 100% 1px;
+}
+
+/* --------------------------------------------------------------------------
+ * 6. 浮层：弹窗 / 抽屉 / 菜单 / 提示
+ * -------------------------------------------------------------------------- */
+.mantine-Modal-content {
+  box-shadow: var(--it-shadow-3);
+  animation: it-pop var(--it-dur-base) var(--it-ease-out) both;
+}
+
+@keyframes it-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.97) translate3d(0, 6px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translate3d(0, 0, 0);
+  }
+}
+
+.mantine-Drawer-content {
+  box-shadow: var(--it-shadow-3);
+}
+
+.mantine-Popover-dropdown,
+.mantine-Menu-dropdown,
+.mantine-Combobox-dropdown,
+.mantine-Select-dropdown {
+  box-shadow: var(--it-shadow-2);
+  animation: it-dropdown-in var(--it-dur-fast) var(--it-ease-out) both;
+}
+
+@keyframes it-dropdown-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, -4px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/* 通知：从右滑入 */
+.mantine-Notification-root {
+  box-shadow: var(--it-shadow-2);
+  animation: it-notification-in var(--it-dur-slow) var(--it-ease-out) both;
+}
+
+@keyframes it-notification-in {
+  from {
+    opacity: 0;
+    transform: translate3d(16px, 0, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/* --------------------------------------------------------------------------
+ * 7. 卡片 / 面板层次
+ * -------------------------------------------------------------------------- */
+.mantine-Card-root,
+.mantine-Paper-root[data-with-border] {
+  transition:
+    box-shadow var(--it-dur-base) var(--it-ease-out),
+    border-color var(--it-dur-fast) linear;
+}
+
+/* 标签页指示条平滑滑动 */
+.mantine-Tabs-tab {
+  transition:
+    background-color var(--it-dur-fast) linear,
+    color var(--it-dur-fast) linear,
+    border-color var(--it-dur-fast) linear;
+}
+
+/* 开关 / 复选：控件过渡更顺滑 */
+.mantine-Switch-track,
+.mantine-Checkbox-input,
+.mantine-Radio-radio {
+  transition:
+    background-color var(--it-dur-fast) linear,
+    border-color var(--it-dur-fast) linear;
+}
+
+/* --------------------------------------------------------------------------
+ * 8. 无障碍：尊重系统"减少动态效果"设置
+ *    开启后所有动画/过渡降到几乎瞬时，避免前庭不适
+ * -------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .it-card-interactive:hover {
+    transform: none;
+  }
+}

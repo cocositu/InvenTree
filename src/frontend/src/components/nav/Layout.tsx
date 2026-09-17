@@ -127,7 +127,10 @@ export default function LayoutComponent() {
           <Header />
           <Container className={classes.layoutContent} size='100%'>
             <Boundary label={'layout'}>
-              <Outlet />
+              {/* 路由切换过渡：key 随 pathname 变化重新挂载，仅做 opacity/transform 动画 */}
+              <div className='it-page-enter' key={location.pathname}>
+                <Outlet />
+              </div>
             </Boundary>
             {/* </ErrorBoundary> */}
           </Container>
