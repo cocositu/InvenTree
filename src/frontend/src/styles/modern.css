@@ -1,31 +1,28 @@
 /* ==========================================================================
- * InvenTree 现代化 UI 增强层
- * --------------------------------------------------------------------------
- * 设计原则：
- *   1. 纯 CSS，不引入任何 JS 动画库 —— 零额外包体积、零运行时开销
- *   2. 动效只使用 transform / opacity（走 GPU 合成层，不触发重排重绘）
- *   3. 所有动效统一尊重 prefers-reduced-motion
- *   4. 令牌集中在 :root，便于后续调整主题
- *
- * 作用范围：仅调整视觉表现与过渡，不改变任何组件结构与业务逻辑
+ * InvenTree 鐜颁唬鍖?UI 澧炲己灞? * --------------------------------------------------------------------------
+ * 璁捐鍘熷垯锛? *   1. 绾?CSS锛屼笉寮曞叆浠讳綍 JS 鍔ㄧ敾搴?鈥斺€?闆堕澶栧寘浣撶Н銆侀浂杩愯鏃跺紑閿€
+ *   2. 鍔ㄦ晥鍙娇鐢?transform / opacity锛堣蛋 GPU 鍚堟垚灞傦紝涓嶈Е鍙戦噸鎺掗噸缁橈級
+ *   3. 鎵€鏈夊姩鏁堢粺涓€灏婇噸 prefers-reduced-motion
+ *   4. 浠ょ墝闆嗕腑鍦?:root锛屼究浜庡悗缁皟鏁翠富棰? *
+ * 浣滅敤鑼冨洿锛氫粎璋冩暣瑙嗚琛ㄧ幇涓庤繃娓★紝涓嶆敼鍙樹换浣曠粍浠剁粨鏋勪笌涓氬姟閫昏緫
  * ========================================================================== */
 
 /* --------------------------------------------------------------------------
- * 1. 设计令牌
+ * 1. 璁捐浠ょ墝
  * -------------------------------------------------------------------------- */
 :root {
-  /* 缓动曲线：ease-out-expo 风格，起始快、结尾稳，主观"跟手" */
+  /* 缂撳姩鏇茬嚎锛歟ase-out-expo 椋庢牸锛岃捣濮嬪揩銆佺粨灏剧ǔ锛屼富瑙?璺熸墜" */
   --it-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --it-ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
   --it-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 
-  /* 时长梯度 */
+  /* 鏃堕暱姊害 */
   --it-dur-instant: 90ms;
   --it-dur-fast: 140ms;
-  --it-dur-base: 200ms;
-  --it-dur-slow: 280ms;
+  --it-dur-base: 160ms;
+  --it-dur-slow: 220ms;
 
-  /* 层次阴影：低透明度多层叠加，比单一深阴影更自然 */
+  /* 灞傛闃村奖锛氫綆閫忔槑搴﹀灞傚彔鍔狅紝姣斿崟涓€娣遍槾褰辨洿鑷劧 */
   --it-shadow-1: 0 1px 2px rgba(16, 24, 40, 0.05), 0 1px 3px rgba(16, 24, 40, 0.06);
   --it-shadow-2: 0 2px 4px rgba(16, 24, 40, 0.05), 0 4px 12px rgba(16, 24, 40, 0.08);
   --it-shadow-3: 0 8px 16px rgba(16, 24, 40, 0.08), 0 2px 6px rgba(16, 24, 40, 0.05);
@@ -38,19 +35,19 @@
 }
 
 /* --------------------------------------------------------------------------
- * 2. 排版优化（中英文混排的关键）
+ * 2. 鎺掔増浼樺寲锛堜腑鑻辨枃娣锋帓鐨勫叧閿級
  * -------------------------------------------------------------------------- */
 html {
-  /* 让中文与拉丁字形渲染更细腻，避免笔画锯齿 */
+  /* 璁╀腑鏂囦笌鎷変竵瀛楀舰娓叉煋鏇寸粏鑵伙紝閬垮厤绗旂敾閿娇 */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-  /* 中文正文行高比英文略大更易读 */
+  /* 涓枃姝ｆ枃琛岄珮姣旇嫳鏂囩暐澶ф洿鏄撹 */
   line-height: 1.55;
 }
 
 body {
-  /* 兜底字体栈，与 Mantine 主题保持一致 */
+  /* 鍏滃簳瀛椾綋鏍堬紝涓?Mantine 涓婚淇濇寔涓€鑷?*/
   font-family:
     -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI',
     'PingFang SC', 'HarmonyOS Sans SC', 'Microsoft YaHei UI', 'Microsoft YaHei',
@@ -59,7 +56,7 @@ body {
     'Apple Color Emoji', 'Segoe UI Emoji';
 }
 
-/* 数字使用等宽数字，表格/数量列不再跳动 */
+/* 鏁板瓧浣跨敤绛夊鏁板瓧锛岃〃鏍?鏁伴噺鍒椾笉鍐嶈烦鍔?*/
 .mantine-datatable-table td,
 .mantine-datatable-table th,
 table td,
@@ -67,13 +64,13 @@ table th {
   font-variant-numeric: tabular-nums;
 }
 
-/* 选中文本配色跟随主色，观感更统一 */
+/* 閫変腑鏂囨湰閰嶈壊璺熼殢涓昏壊锛岃鎰熸洿缁熶竴 */
 ::selection {
   background-color: var(--mantine-primary-color-light, rgba(34, 139, 230, 0.25));
 }
 
 /* --------------------------------------------------------------------------
- * 3. 滚动条（细窄、悬停加深，不再抢视觉）
+ * 3. 婊氬姩鏉★紙缁嗙獎銆佹偓鍋滃姞娣憋紝涓嶅啀鎶㈣瑙夛級
  * -------------------------------------------------------------------------- */
 * {
   scrollbar-width: thin;
@@ -114,10 +111,9 @@ table th {
 }
 
 /* --------------------------------------------------------------------------
- * 4. 页面切换过渡
- *    由 Layout.tsx 在 <Outlet /> 外层按 pathname 重新挂载触发
- *    仅 opacity + translate3d，避免整页重排
- * -------------------------------------------------------------------------- */
+ * 4. 椤甸潰鍒囨崲杩囨浮
+ *    鐢?Layout.tsx 鍦?<Outlet /> 澶栧眰鎸?pathname 閲嶆柊鎸傝浇瑙﹀彂
+ *    浠?opacity + translate3d锛岄伩鍏嶆暣椤甸噸鎺? * -------------------------------------------------------------------------- */
 .it-page-enter {
   animation: it-page-in var(--it-dur-slow) var(--it-ease-out) both;
 }
@@ -133,7 +129,7 @@ table th {
   }
 }
 
-/* 侧边抽屉/详情页滑入 */
+/* 渚ц竟鎶藉眽/璇︽儏椤垫粦鍏?*/
 .it-slide-in-right {
   animation: it-slide-in-right var(--it-dur-base) var(--it-ease-out) both;
 }
@@ -150,10 +146,9 @@ table th {
 }
 
 /* --------------------------------------------------------------------------
- * 5. 交互微动效
- * -------------------------------------------------------------------------- */
+ * 5. 浜や簰寰姩鏁? * -------------------------------------------------------------------------- */
 
-/* 按钮 / 图标按钮：按压缩放反馈 + 背景色渐变过渡 */
+/* 鎸夐挳 / 鍥炬爣鎸夐挳锛氭寜鍘嬬缉鏀惧弽棣?+ 鑳屾櫙鑹叉笎鍙樿繃娓?*/
 .mantine-Button-root,
 .mantine-ActionIcon-root {
   transition:
@@ -169,7 +164,7 @@ table th {
   transform: scale(0.97);
 }
 
-/* 输入框：聚焦时轻微描边过渡，不再突兀 */
+/* 杈撳叆妗嗭細鑱氱劍鏃惰交寰弿杈硅繃娓★紝涓嶅啀绐佸厐 */
 .mantine-Input-input,
 .mantine-Select-input,
 .mantine-Textarea-input,
@@ -180,7 +175,7 @@ table th {
     box-shadow var(--it-dur-base) var(--it-ease-out);
 }
 
-/* 可点击卡片：悬停轻微抬升（仅 transform + shadow） */
+/* 鍙偣鍑诲崱鐗囷細鎮仠杞诲井鎶崌锛堜粎 transform + shadow锛?*/
 .it-card-interactive {
   transition:
     transform var(--it-dur-base) var(--it-ease-out),
@@ -193,12 +188,12 @@ table th {
   box-shadow: var(--it-shadow-2);
 }
 
-/* 表格行：悬停底色渐变，扫读时更舒适 */
+/* 琛ㄦ牸琛岋細鎮仠搴曡壊娓愬彉锛屾壂璇绘椂鏇磋垝閫?*/
 .mantine-datatable-table tbody tr {
   transition: background-color var(--it-dur-fast) linear;
 }
 
-/* 链接：hover 下划线渐显 */
+/* 閾炬帴锛歨over 涓嬪垝绾挎笎鏄?*/
 .it-link-underline {
   background-image: linear-gradient(currentColor, currentColor);
   background-position: 0% 100%;
@@ -212,7 +207,7 @@ table th {
 }
 
 /* --------------------------------------------------------------------------
- * 6. 浮层：弹窗 / 抽屉 / 菜单 / 提示
+ * 6. 娴眰锛氬脊绐?/ 鎶藉眽 / 鑿滃崟 / 鎻愮ず
  * -------------------------------------------------------------------------- */
 .mantine-Modal-content {
   box-shadow: var(--it-shadow-3);
@@ -253,7 +248,7 @@ table th {
   }
 }
 
-/* 通知：从右滑入 */
+/* 閫氱煡锛氫粠鍙虫粦鍏?*/
 .mantine-Notification-root {
   box-shadow: var(--it-shadow-2);
   animation: it-notification-in var(--it-dur-slow) var(--it-ease-out) both;
@@ -271,7 +266,7 @@ table th {
 }
 
 /* --------------------------------------------------------------------------
- * 7. 卡片 / 面板层次
+ * 7. 鍗＄墖 / 闈㈡澘灞傛
  * -------------------------------------------------------------------------- */
 .mantine-Card-root,
 .mantine-Paper-root[data-with-border] {
@@ -280,7 +275,7 @@ table th {
     border-color var(--it-dur-fast) linear;
 }
 
-/* 标签页指示条平滑滑动 */
+/* 鏍囩椤垫寚绀烘潯骞虫粦婊戝姩 */
 .mantine-Tabs-tab {
   transition:
     background-color var(--it-dur-fast) linear,
@@ -288,7 +283,7 @@ table th {
     border-color var(--it-dur-fast) linear;
 }
 
-/* 开关 / 复选：控件过渡更顺滑 */
+/* 寮€鍏?/ 澶嶉€夛細鎺т欢杩囨浮鏇撮『婊?*/
 .mantine-Switch-track,
 .mantine-Checkbox-input,
 .mantine-Radio-radio {
@@ -298,9 +293,8 @@ table th {
 }
 
 /* --------------------------------------------------------------------------
- * 8. 无障碍：尊重系统"减少动态效果"设置
- *    开启后所有动画/过渡降到几乎瞬时，避免前庭不适
- * -------------------------------------------------------------------------- */
+ * 8. 鏃犻殰纰嶏細灏婇噸绯荤粺"鍑忓皯鍔ㄦ€佹晥鏋?璁剧疆
+ *    寮€鍚悗鎵€鏈夊姩鐢?杩囨浮闄嶅埌鍑犱箮鐬椂锛岄伩鍏嶅墠搴笉閫? * -------------------------------------------------------------------------- */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -314,4 +308,54 @@ table th {
   .it-card-interactive:hover {
     transform: none;
   }
+}
+/* --------------------------------------------------------------------------
+ * 9. 楂樺瘑搴﹁〃鏍? *    瀵规爣 Linear / GitHub / Stripe 绛夎〃鏍煎瘑闆嗗瀷宸ュ叿鐨勫仛娉曪細
+ *      - 琛岄珮鍘嬬缉鍒?32~38px 鍖洪棿锛屼竴灞忓鐪?2~3 琛? *      - 琛ㄥご鐢ㄥ皬瀛楀彿 + 涓€х伆 + 娴呭簳鑹插缓绔嬪眰娆★紝鑰屼笉鏄姞绮楀姞榛? *      - 灞傛闈犵粏杈规鍜屾槑搴﹀樊锛屼笉鐢ㄩ槾褰? *      - 绮樻€ц〃澶村繀椤绘湁瀹炲簳鑹诧紝鍚﹀垯婊氬姩鏃跺唴瀹逛細閫忎笂鏉? *    瀵嗗害鍙€氳繃涓嬮潰涓変釜鍙橀噺缁熶竴璋冩暣銆? * -------------------------------------------------------------------------- */
+:root {
+  --it-table-header-font-size: 13px;
+  --it-table-cell-pad-y: 6px;
+}
+
+/* --- 琛ㄥご --- */
+.mantine-datatable-header th {
+  font-size: var(--it-table-header-font-size);
+  font-weight: 600;
+  letter-spacing: 0.015em;
+  color: var(--mantine-color-gray-6);
+  background-color: var(--mantine-color-gray-0);
+  border-bottom: 1px solid var(--mantine-color-gray-3);
+  padding-top: var(--it-table-cell-pad-y);
+  padding-bottom: var(--it-table-cell-pad-y);
+  white-space: nowrap;
+}
+
+[data-mantine-color-scheme='dark'] .mantine-datatable-header th {
+  color: var(--mantine-color-dark-2);
+  background-color: var(--mantine-color-dark-6);
+  border-bottom-color: var(--mantine-color-dark-4);
+}
+
+/* 鎺掑簭鎬侊細浠呯敤棰滆壊娣辨祬鍖哄垎锛屼笉鍋氫綅绉诲姩鐢?*/
+.mantine-datatable-header-cell-sortable:hover:not(:has(button:hover)) {
+  background-color: var(--mantine-color-gray-1);
+}
+
+[data-mantine-color-scheme='dark']
+  .mantine-datatable-header-cell-sortable:hover:not(:has(button:hover)) {
+  background-color: var(--mantine-color-dark-5);
+}
+
+/* --- 鍗曞厓鏍硷細鏀剁揣绾靛悜鍐呰竟璺?--- */
+.mantine-datatable-table td {
+  padding-top: var(--it-table-cell-pad-y);
+  padding-bottom: var(--it-table-cell-pad-y);
+}
+
+/* --- 琛屾偓鍋滐細鏀圭粍浠剁殑 CSS 鍙橀噺锛岄伩鍏嶉€愭潯閫夋嫨鍣ㄨ鐩?--- */
+.mantine-datatable {
+  --mantine-datatable-highlight-on-hover-color-light: var(--mantine-color-gray-0);
+  --mantine-datatable-highlight-on-hover-color-dark: var(--mantine-color-dark-6);
+  --mantine-datatable-border-color-light: var(--mantine-color-gray-3);
+  --mantine-datatable-border-color-dark: var(--mantine-color-dark-4);
 }
