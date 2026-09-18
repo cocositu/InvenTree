@@ -73,9 +73,10 @@ function resourceRow(item) {
   const previewAttrs = item.renderable ? ` data-preview-pk="${escapeHtml(item.pk)}"` : '';
 
   const badges = [];
+  const isFootprint = item.kind === 'footprint';
   if (item.external) badges.push('<span class="pr-badge">外链</span>');
   if (item.renderable) badges.push('<span class="pr-badge pr-badge-render">可交互</span>');
-  if (item.layers && item.layers.length) badges.push(`<span class="pr-badge">${item.layers.length} 层</span>`);
+  if (isFootprint && item.layers && item.layers.length) badges.push(`<span class="pr-badge">${item.layers.length} 层</span>`);
   if (item.pin_count) badges.push(`<span class="pr-badge">${item.pin_count} 脚</span>`);
 
   const download = item.external
@@ -298,7 +299,8 @@ function openResourceViewer(pk) {
 
   // 2D 可渲染资源（KiCad 封装 / 符号）
   if (item.renderable) {
-    const layers = Array.isArray(item.layers) ? item.layers : [];
+    // 只有封装需要按层查看；符号 / 3D 不显示图层工具栏
+    const layers = item.kind === 'footprint' && Array.isArray(item.layers) ? item.layers : [];
     const selected = new Set(layers);
     const image = document.createElement('img');
     image.className = 'pr-viewer-img';
@@ -309,7 +311,17 @@ function openResourceViewer(pk) {
     emptyHint.textContent = '未选择图层。请在工具栏中选择要显示的层。';
     emptyHint.style.display = 'none';
 
+    const hasLayers = layers.length > 0;
+
     const refresh = () => {
+      // 符号 / 3D 没有图层概念：始终直接显示图
+      if (!hasLayers) {
+        image.src = previewUrlFor(item, null);
+        image.style.display = '';
+        emptyHint.style.display = 'none';
+        return;
+      }
+
       if (selected.size === 0) {
         image.style.display = 'none';
         emptyHint.style.display = '';
