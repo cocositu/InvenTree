@@ -47,13 +47,11 @@ html {
 }
 
 body {
-  /* 鍏滃簳瀛椾綋鏍堬紝涓?Mantine 涓婚淇濇寔涓€鑷?*/
-  font-family:
-    -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI',
-    'PingFang SC', 'HarmonyOS Sans SC', 'Microsoft YaHei UI', 'Microsoft YaHei',
-    'Noto Sans SC', 'Source Han Sans SC', 'Hiragino Sans GB', 'Heiti SC',
-    Roboto, Helvetica, Arial, sans-serif,
-    'Apple Color Emoji', 'Segoe UI Emoji';
+  /* 只引用 Mantine 主题变量，不在这里写死字体栈。
+     字体栈的唯一来源是 ThemeContext.tsx 的 UI_FONT_STACK；
+     一旦在此写死，「全界面等宽模式」的变量覆盖就会失效。
+     兜底：浏览器若未加载 Mantine 变量时退回系统无衬线字体。 */
+  font-family: var(--mantine-font-family, sans-serif);
 }
 
 /* 鏁板瓧浣跨敤绛夊鏁板瓧锛岃〃鏍?鏁伴噺鍒椾笉鍐嶈烦鍔?*/
@@ -350,6 +348,10 @@ table th {
 .mantine-datatable-table td {
   padding-top: var(--it-table-cell-pad-y);
   padding-bottom: var(--it-table-cell-pad-y);
+  /* 表格里全是数据：料号、IPN、数量、日期、状态。
+     等宽字体让数值逐位对齐，中英文混排时列不会错位。
+     若要改回界面字体，删掉下面这一行即可。 */
+  font-family: var(--it-font-data);
 }
 
 /* --- 琛屾偓鍋滐細鏀圭粍浠剁殑 CSS 鍙橀噺锛岄伩鍏嶉€愭潯閫夋嫨鍣ㄨ鐩?--- */
@@ -358,4 +360,73 @@ table th {
   --mantine-datatable-highlight-on-hover-color-dark: var(--mantine-color-dark-6);
   --mantine-datatable-border-color-light: var(--mantine-color-gray-3);
   --mantine-datatable-border-color-dark: var(--mantine-color-dark-4);
+}
+/* --------------------------------------------------------------------------
+ * 10. Maple Mono NF CN —— 等宽数据字体
+ * --------------------------------------------------------------------------
+ * 原字体 20.65 MB/字重（含 10,379 个 Nerd Font 图标码位，占 31%）。
+ * InvenTree 使用 Tabler SVG 图标，不依赖字体图标，因此子集化时：
+ *   - 丢弃全部 Nerd Font 图标码位
+ *   - 中文收窄到 GB2312（7445 码位）+ 翻译文件实际用到的全部汉字
+ *   - 保留拉丁 / 标点 / 数学符号 / 全角符号
+ * 结果：8255 码位，两个字重合计约 3.6 MB（自托管，无外部请求）。
+ *
+ * 字体许可：SIL Open Font License 1.1（允许商用与嵌入）
+ * 来源：https://github.com/subframe7536/maple-font
+ * -------------------------------------------------------------------------- */
+@font-face {
+  font-family: 'Maple Mono NF CN';
+  src: url('../assets/fonts/maple-mono-cn-regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Maple Mono NF CN';
+  src: url('../assets/fonts/maple-mono-cn-semibold.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  /* 等宽数据字体：料号、IPN、序列号、SKU、条码、代码 */
+  --it-font-data:
+    'Maple Mono NF CN', 'JetBrains Mono', 'Cascadia Mono', Consolas,
+    'Sarasa Mono SC', monospace;
+}
+
+/* 数据类场景应用等宽字体 */
+.mantine-Code-root,
+.mantine-Kbd-root,
+code,
+kbd,
+pre,
+samp,
+.it-font-data {
+  font-family: var(--it-font-data);
+}
+
+/* 数字列使用等宽数字，配合等宽字体让料号/数量逐位对齐 */
+.mantine-datatable-table td .it-font-data,
+.mantine-datatable-table td code {
+  font-variant-numeric: tabular-nums;
+}
+
+/* --------------------------------------------------------------------------
+ * 11. 全界面等宽模式（可选开关）
+ * --------------------------------------------------------------------------
+ * 默认只把 Maple Mono 用在数据场景；若希望整个界面都换成等宽字体，
+ * 在浏览器控制台执行一次即可（会持久化到 localStorage 之外，仅当前页生效）：
+ *
+ *     document.documentElement.dataset.itFont = 'mono'
+ *
+ * 或在代码里给 <html> 加上 data-it-font="mono" 属性。
+ * 因为只切换 CSS 变量，开启后无需重新构建，也无额外性能开销。
+ * -------------------------------------------------------------------------- */
+html[data-it-font='mono'] {
+  --mantine-font-family: var(--it-font-data);
+  --mantine-font-family-headings: var(--it-font-data);
+  --mantine-font-family-monospace: var(--it-font-data);
 }

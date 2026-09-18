@@ -49,8 +49,15 @@ const UI_FONT_STACK = [
   '"Segoe UI Emoji"'
 ].join(', ');
 
-/** 等宽字体栈：用于料号、序列号、代码等需要逐位对齐的场景 */
+/**
+ * 等宽字体栈：用于料号、IPN、序列号、SKU、条码、代码等需要逐位对齐的场景。
+ *
+ * 首选 Maple Mono NF CN（自托管子集，见 styles/modern.css 顶部的 @font-face）：
+ * 中英文宽度 2:1，中文与拉丁混排时列对齐不会错位。
+ * 后续几项为各平台系统等宽字体兜底。
+ */
 const MONO_FONT_STACK = [
+  '"Maple Mono NF CN"',
   '"JetBrains Mono"',
   '"Cascadia Mono"',
   '"Cascadia Code"',
