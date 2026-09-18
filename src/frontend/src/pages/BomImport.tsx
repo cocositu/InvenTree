@@ -302,10 +302,10 @@ export default function BomImport() {
   }
 
   return (
-    <Stack gap='md'>
+    <Stack gap='md' className='it-page-enter'>
       <Group justify='space-between'>
         <div>
-          <Title order={2}>BOM Import / Match</Title>
+          <Title order={2}>BOM 导入匹配</Title>
           <Text size='sm' c='dimmed'>
             导入 BOM 表，匹配库内元器件，汇总位号 / 数量 / 库位 / 缺料
           </Text>
@@ -398,7 +398,7 @@ export default function BomImport() {
           maxRows={8}
           value={text}
           onChange={(event) => setText(event.currentTarget.value)}
-          placeholder='Designator,Quantity,Comment,Footprint,MPN'
+          placeholder='位号,数量,规格,封装,型号'
         />
         {!!Object.keys(mapping).length && (
           <Text size='xs' c='dimmed' mt={6}>
@@ -430,9 +430,9 @@ export default function BomImport() {
                   <Table.Th>行</Table.Th>
                   <Table.Th>位号</Table.Th>
                   <Table.Th>数量</Table.Th>
-                  <Table.Th>规格 / Value</Table.Th>
+                  <Table.Th>规格</Table.Th>
                   <Table.Th>封装</Table.Th>
-                  <Table.Th>MPN / LCSC</Table.Th>
+                  <Table.Th>型号 / 立创料号</Table.Th>
                   <Table.Th style={{ minWidth: 220 }}>匹配元件</Table.Th>
                   <Table.Th style={{ minWidth: 180 }}>库位 / 仓库</Table.Th>
                   <Table.Th>匹配度</Table.Th>

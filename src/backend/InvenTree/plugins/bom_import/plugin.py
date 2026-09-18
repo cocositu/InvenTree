@@ -421,7 +421,7 @@ class BomImportPlugin(SettingsMixin, UrlsMixin, UserInterfaceMixin, InvenTreePlu
 
     NAME = 'BOM Import'
     SLUG = 'bom-import'
-    TITLE = _('BOM Import / Match')
+    TITLE = _('BOM 导入匹配')
     DESCRIPTION = _(
         'Import a BOM file, match every line against the part library, '
         'and aggregate designators / quantities / stock.'
@@ -431,14 +431,14 @@ class BomImportPlugin(SettingsMixin, UrlsMixin, UserInterfaceMixin, InvenTreePlu
 
     SETTINGS = {
         'ENABLE_NAVIGATION': {
-            'name': _('Enable Navigation Entry'),
-            'description': _('Show a BOM Import entry in the navigation bar'),
+            'name': _('启用导航入口'),
+            'description': _('在顶部导航栏显示 BOM 导入匹配入口'),
             'default': True,
             'validator': bool,
         },
         'MATCH_THRESHOLD': {
-            'name': _('Match Threshold'),
-            'description': _('Scores below this value are marked as review/unmatched'),
+            'name': _('匹配阈值'),
+            'description': _('低于该分数的匹配结果会标记为待确认或未匹配'),
             'default': 0.65,
             'validator': float,
         },
@@ -736,7 +736,7 @@ class BomImportPlugin(SettingsMixin, UrlsMixin, UserInterfaceMixin, InvenTreePlu
         return [
             {
                 'key': 'bom-import-nav',
-                'title': str(_('BOM Import / Match')),
+                'title': str(_('BOM 导入匹配')),
                 'icon': 'ti:file-import:outline',
                 'options': {'url': '/bom-import/'},
             }

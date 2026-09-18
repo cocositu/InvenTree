@@ -214,7 +214,7 @@ class PartResourcesPlugin(SettingsMixin, UrlsMixin, UserInterfaceMixin, InvenTre
 
     NAME = 'Part Resources'
     SLUG = 'part-resources'
-    TITLE = _('Part Design Resources')
+    TITLE = _('元器件设计资源')
     DESCRIPTION = _(
         'Organise part attachments into design resources (datasheet, footprint, '
         'schematic symbol, 3D model) and download them as a single zip archive'
@@ -224,35 +224,35 @@ class PartResourcesPlugin(SettingsMixin, UrlsMixin, UserInterfaceMixin, InvenTre
 
     SETTINGS = {
         'ENABLE_PART_PANEL': {
-            'name': _('Enable Part Panel'),
-            'description': _('Show the design resources panel on Part detail pages'),
+            'name': _('启用物料面板'),
+            'description': _('在物料详情页显示设计资源面板'),
             'default': True,
             'validator': bool,
         },
         'ENABLE_3D_PREVIEW': {
-            'name': _('Enable 3D Preview'),
+            'name': _('启用 3D 预览'),
             'description': _(
-                'Render STEP / IGES models to cached thumbnails and on-demand previews '
-                '(requires the optional cascadio package)'
+                '把 STEP / IGES 模型渲染成缓存缩略图和按需高清预览'
+                '（需要可选的 cascadio 依赖）'
             ),
             'default': True,
             'validator': bool,
         },
         'USE_KICAD_CLI': {
-            'name': _('Use KiCad CLI'),
+            'name': _('使用 KiCad 官方 CLI'),
             'description': _(
-                'Use the official kicad-cli to render .kicad_mod / .kicad_sym previews. '
-                'Falls back to the built-in renderer when unavailable.'
+                '使用官方 kicad-cli 渲染 .kicad_mod / .kicad_sym 预览；'
+                '不可用时自动回退到内置渲染器。'
             ),
             'default': True,
             'validator': bool,
         },
         'KICAD_CLI_PATH': {
-            'name': _('KiCad CLI Path'),
+            'name': _('KiCad CLI 路径'),
             'description': _(
-                'Optional path or command prefix for kicad-cli. '
-                'Linux/Debian: /usr/bin/kicad-cli. '
-                'Leave empty for automatic detection.'
+                '可选的 kicad-cli 路径或命令前缀。'
+                'Debian/Linux 通常为 /usr/bin/kicad-cli；'
+                '留空则自动探测。'
             ),
             'default': '',
             'validator': str,
@@ -895,7 +895,7 @@ class PartResourcesPlugin(SettingsMixin, UrlsMixin, UserInterfaceMixin, InvenTre
             panels.append(
                 {
                     'key': 'part-resources',
-                    'title': str(_('Design Resources')),
+                    'title': str(_('物料设计资源')),
                     'icon': 'ti:files:outline',
                     'source': self.plugin_static_file(
                         'panel-ecaafef7c2.js:renderPartPanel', check_hash=False
