@@ -40,7 +40,17 @@
   .error{color:var(--red);font-size:13px;white-space:pre-wrap}
   .hidden{display:none}
   .legend{font-size:12px;color:var(--muted);margin-top:6px}
-</style>
+  .switch-test{color:red}  .switch{display:inline-flex;align-items:center;gap:8px;cursor:pointer;user-select:none}
+  .switch input{display:none}
+  .slider{width:40px;height:22px;border-radius:999px;background:#ced4da;position:relative;transition:background-color .15s;flex:none}
+  .slider:before{content:"";position:absolute;width:18px;height:18px;border-radius:50%;background:#fff;top:2px;left:2px;box-shadow:0 1px 2px rgba(0,0,0,.2);transition:transform .15s}
+  .switch input:checked + .slider{background:var(--blue)}
+  .switch input:checked + .slider:before{transform:translateX(18px)}
+  .switch-label{font-weight:600}
+  .banner{border-radius:6px;padding:8px 12px;font-size:13px;margin-top:8px}
+  .banner.ok{background:var(--green-bg);color:var(--green)}
+  .banner.warn{background:var(--orange-bg);color:var(--orange)}
+  .banner.err{background:var(--red-bg);color:var(--red)}</style>
 </head>
 <body>
 <header>
@@ -51,6 +61,23 @@
   <div><a style="color:#93c5fd" href="/web/">返回 InvenTree</a></div>
 </header>
 <main>
+  <div class="card">
+    <div class="topbar">
+      <label class="switch" title="匹配完成后，可手动从库存中扣减匹配数量">
+        <input type="checkbox" id="deductStock">
+        <span class="slider"></span>
+        <span class="switch-label">扣减库存</span>
+      </label>
+      <label class="muted">整张 BOM 倍率
+        <input type="number" id="globalMultiplier" value="1" min="1" step="1" style="width:70px;padding:4px;border:1px solid var(--border);border-radius:6px">
+      </label>
+      <button class="primary" id="btnDeductAll" disabled>整张 BOM 扣减</button>
+      <button class="primary" id="btnDeductSelected" disabled>选中行扣减</button>
+      <span class="muted">默认关闭；开启后只扣未被占用库存，并写入 InvenTree 库存历史。</span>
+    </div>
+    <div id="deductResult"></div>
+  </div>
+
   <div class="card">
     <div class="toolbar">
       <input type="file" id="file" accept=".csv,.txt,.xlsx,.xlsm">
@@ -79,7 +106,7 @@
 </main>
 <script>
 const $ = (s) => document.querySelector(s);
-const state = { rows: [], results: [] };
+const state = { rows: [], results: [], mapping: {} };
 
 function csrfToken(){
   const match = document.cookie.match(/(?:^|; )csrftoken=([^;]+)/);
@@ -113,11 +140,21 @@ function escapeHtml(value){ return String(value ?? '').replaceAll('&','&amp;').r
 
 async function runMatch(parsed){
   state.rows = parsed.rows || [];
-  $('#mapping').textContent = '识别到的列: ' + Object.entries(parsed.mapping || {}).map(([k,v]) => `${k} → 第${v+1}列`).join('，');
+  state.mapping = parsed.mapping || {};
+  $('#mapping').textContent = '识别到的列: ' + Object.entries(state.mapping).map(([k,v]) => `${k} → 第${v+1}列`).join('，');
   if(!state.rows.length){ throw new Error('没有解析到数据行'); }
   const data = await postJSON('/plugin/bom-import/match/', { rows: state.rows });
   state.results = data.rows || [];
   render(data.summary || {});
+  updateDeductButtons();
+}
+
+function updateDeductButtons(){
+  const on = $('#deductStock').checked;
+  const hasMatched = state.results.some(r => r.candidates?.[0] && Number(r.quantity || 0) > 0);
+  const selectedCount = document.querySelectorAll('.row-select:checked').length;
+  $('#btnDeductAll').disabled = !(on && hasMatched);
+  $('#btnDeductSelected').disabled = !(on && selectedCount > 0);
 }
 
 function render(summary){
@@ -134,7 +171,7 @@ function render(summary){
   $('#summary').innerHTML = stats.map(([label,value]) =>
     `<div class="stat"><b>${escapeHtml(value)}</b><span>${escapeHtml(label)}</span></div>`).join('');
 
-  const head = ['行','位号','数量','规格 / Value','封装','MPN / LCSC','匹配元件','匹配度','库存','缺料','状态'];
+  const head = ['选','行','位号','数量','规格 / Value','封装','MPN / LCSC','匹配元件','库位 / 仓库','匹配度','库存','缺料','倍率','状态'];
   $('#table thead').innerHTML = '<tr>' + head.map(h => `<th>${h}</th>`).join('') + '</tr>';
 
   $('#table tbody').innerHTML = state.results.map((row, index) => {
@@ -146,8 +183,12 @@ function render(summary){
     const link = selected
       ? `<a href="/web/part/${selected.pk}/details" target="_blank" rel="noopener">${escapeHtml(selected.name)}</a>${selected.ipn ? `<div class="muted mono">${escapeHtml(selected.ipn)}</div>` : ''}`
       : '<span class="muted">— 无候选 —</span>';
+    const locationText = (selected?.stock_locations || [])
+      .map((loc) => `${escapeHtml(loc.path || loc.name || '')}${loc.quantity ? ` (${Number(loc.quantity).toFixed(0)})` : ''}`)
+      .join('<br>') || '<span class="muted">—</span>';
 
     return `<tr data-index="${index}">
+      <td>${selected ? `<input type="checkbox" class="row-select" data-index="${index}">` : ''}</td>
       <td class="muted">${row.line || index+1}</td>
       <td class="mono">${escapeHtml(row.designators || '')}</td>
       <td>${escapeHtml(row.quantity || '')}</td>
@@ -155,9 +196,11 @@ function render(summary){
       <td>${escapeHtml(row.footprint || '')}</td>
       <td class="mono">${escapeHtml(row.mpn || row.lcsc || '')}</td>
       <td>${link}${candidates.length > 1 ? `<div style="margin-top:4px"><select data-select-index="${index}">${options}</select></div>` : ''}</td>
+      <td>${locationText}</td>
       <td>${Math.round((row.score || 0) * 100)}%<div class="muted">${escapeHtml((selected?.matched_on || []).join(', '))}</div></td>
       <td>${Number(row.stock || 0).toFixed(0)}</td>
       <td>${Number(row.shortage || 0).toFixed(0)}</td>
+      <td><input type="number" class="row-multiplier" data-index="${index}" value="1" min="1" step="1" style="width:60px"></td>
       <td><span class="status ${row.status}">${statusText(row.status)}</span></td>
     </tr>`;
   }).join('');
@@ -173,6 +216,7 @@ function render(summary){
       state.results[index].shortage = Math.max(0, Number(state.results[index].quantity || 0) - Number(candidate.stock || 0));
       state.results[index].status = candidate.score >= 0.9 ? 'matched' : (candidate.score >= 0.65 ? 'review' : 'unmatched');
       render(computeSummary());
+      updateDeductButtons();
     });
   });
 }
@@ -217,6 +261,60 @@ async function parseText(){
   } catch(err){ showError(err.message); }
 }
 
+function parseMultiplier(value){
+  const number = Math.floor(Number(value));
+  return Number.isFinite(number) && number > 0 ? number : 1;
+}
+
+async function deductStock(mode){
+  const selectedMode = mode === 'selected';
+  const items = [];
+  state.results.forEach((row, index) => {
+    const candidate = row.candidates?.[0];
+    if(!candidate || Number(row.quantity || 0) <= 0 || row.status === 'unmatched') return;
+    let factor = 1;
+    if(selectedMode){
+      const checkbox = document.querySelector(`.row-select[data-index="${index}"]`);
+      if(!checkbox || !checkbox.checked) return;
+      const input = document.querySelector(`.row-multiplier[data-index="${index}"]`);
+      factor = parseMultiplier(input?.value || 1);
+    } else {
+      factor = parseMultiplier($('#globalMultiplier').value || 1);
+    }
+    if(!Number.isFinite(factor) || factor <= 0) factor = 1;
+    items.push({
+      pk: candidate.pk,
+      line: row.line,
+      designators: row.designators,
+      quantity: Number(row.quantity || 0) * factor,
+      part_name: candidate.name,
+      multiplier: factor,
+    });
+  });
+
+  if(!items.length){ $('#deductResult').innerHTML = '<div class="banner warn">没有可扣减的行。</div>'; return; }
+  const total = items.reduce((sum,r) => sum + Number(r.quantity || 0), 0);
+  const modeText = selectedMode ? '选中行' : '整张 BOM';
+  if(!window.confirm(`${modeText}扣减：${items.length} 种元件，共 ${total} 个数量。确认从库存扣减？`)) return;
+
+  $('#btnDeductAll').disabled = true;
+  $('#btnDeductSelected').disabled = true;
+  try {
+    const result = await postJSON('/plugin/bom-import/deduct/', { items });
+    let html = `<div class="banner ok">扣减完成：共扣 <b>${result.deducted}</b>，缺口 <b>${result.shortage}</b>。</div>`;
+    const errors = (result.details || []).filter(d => d.error);
+    if(errors.length) html += `<div class="banner err">${errors.length} 行失败：${errors.map(e => escapeHtml(e.error)).join('；')}</div>`;
+    $('#deductResult').innerHTML = html;
+    const refreshed = await postJSON('/plugin/bom-import/match/', { rows: state.rows });
+    state.results = refreshed.rows || [];
+    render(refreshed.summary || {});
+  } catch(err){
+    $('#deductResult').innerHTML = `<div class="banner err">扣减失败：${escapeHtml(err.message)}</div>`;
+  } finally {
+    updateDeductButtons();
+  }
+}
+
 function exportCSV(){
   const headers = ['line','designators','quantity','comment','footprint','mpn','lcsc','part_name','part_ipn','score','stock','shortage','status'];
   const lines = [headers.join(',')];
@@ -235,6 +333,12 @@ function exportCSV(){
   URL.revokeObjectURL(url);
 }
 
+document.addEventListener('change', (event) => {
+  if(event.target.classList.contains('row-select')) updateDeductButtons();
+});
+$('#deductStock').addEventListener('change', updateDeductButtons);
+$('#btnDeductAll').addEventListener('click', () => deductStock('all'));
+$('#btnDeductSelected').addEventListener('click', () => deductStock('selected'));
 $('#btnFile').addEventListener('click', parseFile);
 $('#btnText').addEventListener('click', parseText);
 $('#btnExport').addEventListener('click', exportCSV);

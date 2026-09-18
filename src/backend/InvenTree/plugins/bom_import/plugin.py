@@ -16,9 +16,11 @@ import csv
 import io
 import re
 import time
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
-from django.db.models import Q
+from django.db import transaction
+from django.db.models import Q, Sum
 from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
 from django.urls import path
 from django.utils.translation import gettext_lazy as _
@@ -26,6 +28,7 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 
 from part.models import Part
+from stock.models import StockItem
 from plugin import InvenTreePlugin
 from plugin.mixins import SettingsMixin, UrlsMixin, UserInterfaceMixin
 
@@ -231,6 +234,24 @@ def _library_index(force=False):
     ):
         return _LIBRARY_CACHE['index']
 
+    location_map = {}
+    try:
+        stock_rows = (
+            StockItem.objects.filter(quantity__gt=0)
+            .values('part_id', 'location__pathstring', 'location__name')
+            .annotate(total=Sum('quantity'))
+        )
+        for row in stock_rows:
+            location_map.setdefault(row['part_id'], []).append({
+                'path': row.get('location__pathstring') or row.get('location__name') or '',
+                'name': row.get('location__name') or '',
+                'quantity': float(row.get('total') or 0),
+            })
+        for locations in location_map.values():
+            locations.sort(key=lambda item: item['quantity'], reverse=True)
+    except Exception:
+        location_map = {}
+
     index = []
     parts = (
         Part.objects.filter(active=True)
@@ -263,6 +284,7 @@ def _library_index(force=False):
             'parameters': params,
             'texts': texts,
             'stock': float(part.total_stock or 0),
+            'stock_locations': location_map.get(part.pk, []),
         })
 
     _LIBRARY_CACHE.update({
@@ -363,6 +385,7 @@ def _match_row(row, index, limit=3):
             'score': round(score, 4),
             'matched_on': sorted(set(reasons))[:4],
             'stock': item['stock'],
+            'stock_locations': item.get('stock_locations', [])[:6],
         })
 
     best = candidates[0] if candidates else None
@@ -531,6 +554,111 @@ class BomImportPlugin(SettingsMixin, UrlsMixin, UserInterfaceMixin, InvenTreePlu
             ]
         })
 
+    @transaction.atomic
+    def _deduct_items(self, items, user):
+        """Deduct matched BOM quantities from unallocated stock.
+
+        Uses ``StockItem.take_stock(...)`` so InvenTree stock history is preserved.
+        Returns a per-item result list and summary.
+        """
+        details = []
+        total_deducted = Decimal('0')
+        total_shortage = Decimal('0')
+
+        for entry in items:
+            try:
+                part = Part.objects.get(pk=int(entry.get('pk')))
+                quantity = Decimal(str(entry.get('quantity') or 0))
+            except (Part.DoesNotExist, TypeError, ValueError, InvalidOperation):
+                details.append({
+                    'pk': entry.get('pk'),
+                    'line': entry.get('line'),
+                    'designators': entry.get('designators') or '',
+                    'deducted': 0,
+                    'shortage': float(entry.get('quantity') or 0),
+                    'error': '零件不存在或数量非法',
+                })
+                continue
+
+            if quantity <= 0:
+                continue
+
+            remaining = quantity
+            deducted = Decimal('0')
+            used_items = []
+
+            stock_items = (
+                StockItem.objects.filter(part=part, quantity__gt=0)
+                .filter(Q(serial__isnull=True) | Q(serial=''))
+                .order_by('expiry_date', 'pk')
+            )
+
+            for stock_item in stock_items:
+                if remaining <= 0:
+                    break
+
+                available = stock_item.unallocated_quantity()
+                if available <= 0:
+                    continue
+
+                take = min(available, remaining)
+                note = f"BOM Import: {entry.get('designators') or entry.get('line') or ''}".strip()
+                result = stock_item.take_stock(take, user, notes=note)
+
+                if result is False:
+                    continue
+
+                deducted += take
+                remaining -= take
+                used_items.append({
+                    'stock_item': stock_item.pk,
+                    'quantity': float(take),
+                })
+
+                total_deducted += take
+
+            shortage = max(remaining, Decimal('0'))
+            total_shortage += shortage
+
+            details.append({
+                'pk': part.pk,
+                'line': entry.get('line'),
+                'designators': entry.get('designators') or '',
+                'part_name': part.name,
+                'requested': float(quantity),
+                'deducted': float(deducted),
+                'shortage': float(shortage),
+                'stock_items': used_items,
+            })
+
+        return {
+            'details': details,
+            'deducted': float(total_deducted),
+            'shortage': float(total_shortage),
+        }
+
+    @require_http_methods(['POST'])
+    def view_deduct(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return JsonResponse({'error': 'permission denied'}, status=403)
+
+        if not StockItem.check_related_permission('change', request.user):
+            return JsonResponse({'error': '没有修改库存的权限'}, status=403)
+
+        import json
+
+        try:
+            body = json.loads(request.body or b'{}')
+        except Exception:
+            return JsonResponse({'error': 'invalid json'}, status=400)
+
+        items = body.get('items') or []
+        if not isinstance(items, list) or not items:
+            return JsonResponse({'error': '没有可扣减的行'}, status=400)
+
+        result = self._deduct_items(items, request.user)
+        return JsonResponse(result)
+
     def setup_urls(self):
         return [
             path(
@@ -549,6 +677,11 @@ class BomImportPlugin(SettingsMixin, UrlsMixin, UserInterfaceMixin, InvenTreePlu
                 name='bom-import-match',
             ),
             path('search/', self.view_search, name='bom-import-search'),
+            path(
+                'deduct/',
+                require_http_methods(['POST'])(self.view_deduct),
+                name='bom-import-deduct',
+            ),
         ]
 
     # ------------------------------------------------------------------
