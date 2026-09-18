@@ -84,6 +84,9 @@ KIND_LABELS['other'] = str(_('Other'))
 # 进程内缓存 kicad-cli 生成的 SVG（超时/文件变化后自动失效）
 _KICAD_SVG_CACHE = {}
 
+# 进程内缓存 STEP / IGES 转换出的 3D mesh JSON
+_MESH_CACHE = {}
+
 
 def classify_attachment(attachment) -> str:
     """判断一条附件属于哪一类设计资源。
@@ -596,7 +599,21 @@ class PartResourcesPlugin(SettingsMixin, UrlsMixin, UserInterfaceMixin, InvenTre
             return JsonResponse({'error': 'Not a 3D CAD attachment'}, status=415)
 
         file_type = 'iges' if lower.endswith(('.iges', '.igs')) else 'step'
-        mesh = renderer.mesh_from_brep(data, file_type=file_type)
+
+        cache_key = (
+            attachment.pk,
+            attachment.file_size or 0,
+            attachment.upload_date.isoformat() if attachment.upload_date else '',
+        )
+        mesh = _MESH_CACHE.get(cache_key)
+
+        if mesh is None:
+            mesh = renderer.mesh_from_brep(data, file_type=file_type)
+            if mesh:
+                if len(_MESH_CACHE) > 32:
+                    _MESH_CACHE.clear()
+                _MESH_CACHE[cache_key] = mesh
+
         if not mesh:
             return JsonResponse({'error': 'Unable to tessellate STEP / IGES'}, status=415)
 
@@ -898,7 +915,7 @@ class PartResourcesPlugin(SettingsMixin, UrlsMixin, UserInterfaceMixin, InvenTre
                     'title': str(_('物料设计资源')),
                     'icon': 'ti:files:outline',
                     'source': self.plugin_static_file(
-                        'panel-ecaafef7c2.js:renderPartPanel', check_hash=False
+                        'panel-9a7944cbc5.js:renderPartPanel', check_hash=False
                     ),
                 }
             )

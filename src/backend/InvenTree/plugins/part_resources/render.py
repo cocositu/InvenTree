@@ -1079,7 +1079,7 @@ def mesh_from_brep(data: bytes, file_type: str = 'step', max_triangles: int = 30
     except Exception:
         return None
 
-    tolerance = 0.2
+    tolerance = 0.5
     triangles = []
 
     for _attempt in range(4):

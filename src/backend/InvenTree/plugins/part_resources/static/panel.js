@@ -527,10 +527,22 @@ function createMeshViewer(canvas, mesh) {
       const ny = uz * vx - ux * vz;
       const nz = ux * vy - uy * vx;
       const normalLength = Math.hypot(nx, ny, nz) || 1;
+      const normalZ = nz / normalLength;
+
+      // Backface culling: for closed CAD solids this halves the fill work.
+      if (normalZ <= 0) continue;
+
+      // Skip sub-pixel triangles; they contribute almost nothing visually.
+      const area2 = Math.abs(
+        (px[b] - px[a]) * (py[c] - py[a]) -
+        (px[c] - px[a]) * (py[b] - py[a])
+      );
+      if (area2 < 0.6) continue;
+
       const lambert = Math.abs(
         (nx / normalLength) * light[0] +
         (ny / normalLength) * light[1] +
-        (nz / normalLength) * light[2]
+        normalZ * light[2]
       );
       const intensity = 0.34 + 0.66 * lambert;
       const base = colors[t / 3] || [0.38, 0.55, 0.72];
