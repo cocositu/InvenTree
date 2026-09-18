@@ -106,3 +106,10 @@
 [data-mantine-color-scheme='dark'] .pr-viewer-img,
 [data-mantine-color-scheme='dark'] .pr-mesh-canvas{border-color:var(--mantine-color-dark-4)}
 [data-mantine-color-scheme='dark'] .pr-layer-btn{border-color:var(--mantine-color-dark-4);color:var(--mantine-color-dark-1)}
+
+/* BOM 行参数 / 子装配标记 */
+.pr-bom-params{margin-top:2px;font-size:11px;line-height:1.6;color:var(--mantine-color-gray-6);
+  overflow:hidden;text-overflow:ellipsis}
+.pr-badge-subassembly{margin-left:6px;background:color-mix(in srgb,var(--mantine-color-orange-6) 16%,transparent);
+  color:var(--mantine-color-orange-7)}
+[data-mantine-color-scheme='dark'] .pr-bom-params{color:var(--mantine-color-dark-2)}

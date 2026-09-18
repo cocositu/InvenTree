@@ -637,28 +637,56 @@ class PartResourcesPlugin(SettingsMixin, UrlsMixin, UserInterfaceMixin, InvenTre
         """
         lines = []
 
-        for item in (
-            BomItem.objects.filter(part=part)
+        # get_bom_items() 会包含 InvenTree 原生的 inherited / virtual BOM 行，
+        # 比直接 BomItem.objects.filter(part=part) 更完整。
+        bom_items = (
+            part.get_bom_items(include_inherited=True, include_virtual=True)
             .select_related('sub_part')
+            .prefetch_related('sub_part__parameters_list__template')
             .order_by('sub_part__name')
-        ):
+        )
+
+        for item in bom_items:
             sub = item.sub_part
             if sub is None:
                 continue
 
             resources = [serialize_attachment(self, a) for a in self._attachments(sub)]
 
+            # 把子件的参数（封装/容差/耐压等）一起带到 BOM 行
+            parameters = []
+            try:
+                for parameter in sub.parameters_list.all():
+                    template = getattr(parameter, 'template', None)
+                    if template is None:
+                        continue
+                    parameters.append(
+                        {
+                            'name': template.name,
+                            'value': parameter.data,
+                            'units': template.units or '',
+                        }
+                    )
+            except Exception:
+                parameters = []
+
             lines.append(
                 {
                     'bom_pk': item.pk,
                     'quantity': float(item.quantity or 0),
                     'note': item.note or '',
+                    'inherited': bool(getattr(item, 'inherited', False)),
+                    'optional': bool(getattr(item, 'optional', False)),
+                    'consumable': bool(getattr(item, 'consumable', False)),
+                    'reference': getattr(item, 'reference', '') or '',
                     'part': {
                         'pk': sub.pk,
                         'name': sub.name,
                         'ipn': sub.IPN or '',
                         'description': sub.description or '',
                         'link': sub.link or '',
+                        'assembly': bool(getattr(sub, 'assembly', False)),
+                        'parameters': parameters,
                     },
                     'resources': resources,
                     'resource_count': len(resources),
@@ -756,6 +784,13 @@ class PartResourcesPlugin(SettingsMixin, UrlsMixin, UserInterfaceMixin, InvenTre
                 )
                 if sub['description']:
                     bom_report.append(f'          {sub["description"]}')
+                parameters = sub.get('parameters') or []
+                if parameters:
+                    text = ', '.join(
+                        f'{p["name"]}={p["value"]}{(" " + p["units"]) if p.get("units") else ""}'
+                        for p in parameters
+                    )
+                    bom_report.append(f'          params: {text}')
                 if sub['link']:
                     bom_report.append(f'          link: {sub["link"]}')
 
@@ -863,7 +898,7 @@ class PartResourcesPlugin(SettingsMixin, UrlsMixin, UserInterfaceMixin, InvenTre
                     'title': str(_('Design Resources')),
                     'icon': 'ti:files:outline',
                     'source': self.plugin_static_file(
-                        'panel-23ab2a975c.js:renderPartPanel', check_hash=False
+                        'panel-f54cd5d491.js:renderPartPanel', check_hash=False
                     ),
                 }
             )

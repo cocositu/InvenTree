@@ -17,7 +17,7 @@
   const link = document.createElement('link');
   link.id = 'part-resources-panel-style';
   link.rel = 'stylesheet';
-  link.href = '/static/plugins/part-resources/panel.css?v=5';
+  link.href = '/static/plugins/part-resources/panel.css?v=6';
   document.head.appendChild(link);
 })();
 
@@ -130,6 +130,11 @@ function renderBomSection(bom) {
       const partUrl = `/part/${encodeURIComponent(part.pk)}/part-resources`;
       const quantity = Number.isFinite(Number(line.quantity)) ? Number(line.quantity) : 1;
       const note = line.note ? ` · ${escapeHtml(line.note)}` : '';
+      const parameterText = (part.parameters || [])
+        .slice(0, 8)
+        .map((p) => `${escapeHtml(p.name)}=${escapeHtml(p.value)}${p.units ? ' ' + escapeHtml(p.units) : ''}`)
+        .join(' · ');
+      const assemblyBadge = part.assembly ? '<span class="pr-badge pr-badge-subassembly">子装配</span>' : '';
 
       const resourceLinks = (line.resources || [])
         .map((item) => {
@@ -152,8 +157,9 @@ function renderBomSection(bom) {
               ${escapeHtml(part.name || '未命名子件')}
             </a>
             <div class="pr-meta">
-              ${escapeHtml(part.ipn || '')} × ${quantity}${note}
+              ${escapeHtml(part.ipn || '')} × ${quantity}${note}${assemblyBadge}
             </div>
+            ${parameterText ? `<div class="pr-bom-params">${parameterText}</div>` : ''}
             <div class="pr-bom-resources">${resources}</div>
           </div>
           <div class="pr-bom-actions">
