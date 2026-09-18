@@ -7,13 +7,17 @@ export const layoutHeader = style({
   paddingTop: vars.spacing.sm,
   marginBottom: 10,
 
+  // 顶栏用纯白面 + 一根 hairline + 极轻投影，与内容区拉开层次。
+  // 之前用 gray[0] 且无投影，整块糊在一起。
   [vars.lightSelector]: {
-    backgroundColor: vars.colors.gray[0],
-    borderBottom: `${rem(1)} solid ${vars.colors.gray[2]}`
+    backgroundColor: vars.colors.white,
+    borderBottom: `${rem(1)} solid ${vars.colors.gray[2]}`,
+    boxShadow: '0 1px 2px rgba(16, 24, 40, 0.04)'
   },
   [vars.darkSelector]: {
     backgroundColor: vars.colors.dark[6],
-    borderBottom: `${rem(1)} solid transparent`
+    borderBottom: `${rem(1)} solid ${vars.colors.dark[4]}`,
+    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.35)'
   }
 });
 

@@ -91,7 +91,7 @@ export const useLocalState = create<LocalStateProps>()(
         primaryColor: 'indigo',
         whiteColor: '#fff',
         blackColor: '#000',
-        radius: 'xs',
+        radius: 'md',
         loader: 'oval'
       },
       setTheme: (newValues, noPatch = false) => {

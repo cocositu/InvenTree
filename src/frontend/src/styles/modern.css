@@ -430,3 +430,83 @@ html[data-it-font='mono'] {
   --mantine-font-family-headings: var(--it-font-data);
   --mantine-font-family-monospace: var(--it-font-data);
 }
+/* --------------------------------------------------------------------------
+ * 12. 现代外观：组件层次与交互质感
+ * --------------------------------------------------------------------------
+ * 设计取向：白色内容面 + 一根 hairline 描边 + 极轻投影。
+ * 层次靠"明度差 + 细边框 + 低透明度多层阴影"建立，不用粗边框和重投影。
+ * 所有过渡只涉及 background-color / border-color / box-shadow / transform，
+ * 均为合成或廉价属性，不触发重排。
+ * -------------------------------------------------------------------------- */
+
+/* --- 卡片 / 面板：极轻投影，替代粗边框带来的"表格感" --- */
+.mantine-Paper-root[data-with-border],
+.mantine-Card-root[data-with-border] {
+  border-color: var(--mantine-color-gray-2);
+  box-shadow: var(--it-shadow-1);
+}
+
+[data-mantine-color-scheme='dark'] .mantine-Paper-root[data-with-border],
+[data-mantine-color-scheme='dark'] .mantine-Card-root[data-with-border] {
+  border-color: var(--mantine-color-dark-4);
+  box-shadow: var(--it-shadow-1);
+}
+
+/* --- 按钮：悬停有层次，按压有回馈 --- */
+.mantine-Button-root[data-variant='filled']:hover:not([data-disabled]) {
+  box-shadow: 0 2px 8px rgba(16, 24, 40, 0.14);
+}
+
+.mantine-Button-root[data-variant='default']:hover:not([data-disabled]),
+.mantine-Button-root[data-variant='light']:hover:not([data-disabled]) {
+  border-color: var(--mantine-color-gray-3);
+}
+
+[data-mantine-color-scheme='dark']
+  .mantine-Button-root[data-variant='default']:hover:not([data-disabled]),
+[data-mantine-color-scheme='dark']
+  .mantine-Button-root[data-variant='light']:hover:not([data-disabled]) {
+  border-color: var(--mantine-color-dark-3);
+}
+
+/* --- 输入控件：聚焦时柔和外发光，而不是生硬的边框变色 --- */
+.mantine-Input-input:focus,
+.mantine-Input-input:focus-within,
+.mantine-Select-input:focus,
+.mantine-Textarea-input:focus {
+  box-shadow: 0 0 0 3px var(--mantine-primary-color-light);
+}
+
+/* --- 菜单 / 下拉项：圆角 + 悬停底色过渡 --- */
+.mantine-Menu-item,
+.mantine-Combobox-option {
+  border-radius: 6px;
+  transition: background-color var(--it-dur-instant) linear;
+}
+
+/* --- 导航与工具条：悬停底色统一 --- */
+.mantine-Tabs-tab:hover:not([data-active]) {
+  background-color: var(--mantine-color-gray-1);
+}
+
+[data-mantine-color-scheme='dark']
+  .mantine-Tabs-tab:hover:not([data-active]) {
+  background-color: var(--mantine-color-dark-5);
+}
+
+/* --- 徽章：圆角更柔和，字重统一 --- */
+.mantine-Badge-root {
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+/* --- 弹窗与抽屉：更大的圆角 + 层次投影 --- */
+.mantine-Modal-content,
+.mantine-Drawer-content {
+  border-radius: 12px;
+  box-shadow: var(--it-shadow-3);
+}
+
+.mantine-Drawer-content {
+  border-radius: 0;
+}
