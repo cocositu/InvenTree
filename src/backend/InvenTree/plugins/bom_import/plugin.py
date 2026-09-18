@@ -451,7 +451,13 @@ class BomImportPlugin(SettingsMixin, UrlsMixin, UserInterfaceMixin, InvenTreePlu
             return HttpResponse('请先登录 InvenTree 后再打开 BOM Import。', status=403)
 
         page = Path(__file__).parent / 'static' / 'index.html'
-        return HttpResponse(page.read_text(encoding='utf-8'), content_type='text/html; charset=utf-8')
+        response = HttpResponse(
+            page.read_text(encoding='utf-8'),
+            content_type='text/html; charset=utf-8',
+        )
+        # 允许 InvenTree 前端 /web/bom-import/ 页面以同源 iframe 方式嵌入
+        response['X-Frame-Options'] = 'SAMEORIGIN'
+        return response
 
     def view_parse(self, request, *args, **kwargs):
         if not request.user.is_authenticated:
@@ -688,9 +694,18 @@ class BomImportPlugin(SettingsMixin, UrlsMixin, UserInterfaceMixin, InvenTreePlu
     # UI hooks
     # ------------------------------------------------------------------
     def get_ui_navigation_items(self, request, context, **kwargs):
-        # InvenTree 前端会把导航 URL 当成 SPA 内部路由处理，
-        # /plugin/bom-import/ 会被 404。BOM 页面改为 Dashboard 卡片入口。
-        return []
+        # 指向 InvenTree 前端自己的路由页 /web/bom-import/，
+        # 前端路由页会加载独立的 /plugin/bom-import/ 页面。
+        if not self.get_setting('ENABLE_NAVIGATION'):
+            return []
+        return [
+            {
+                'key': 'bom-import-nav',
+                'title': str(_('BOM Import / Match')),
+                'icon': 'ti:file-import:outline',
+                'options': {'url': '/bom-import/'},
+            }
+        ]
 
     def get_ui_dashboard_items(self, request, context, **kwargs):
         if not self.get_setting('ENABLE_NAVIGATION'):
