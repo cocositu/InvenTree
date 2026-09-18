@@ -29,6 +29,7 @@ from django.views.decorators.http import require_http_methods
 
 from part.models import Part
 from stock.models import StockItem
+from users.permissions import check_user_role
 from plugin import InvenTreePlugin
 from plugin.mixins import SettingsMixin, UrlsMixin, UserInterfaceMixin
 
@@ -444,11 +445,27 @@ class BomImportPlugin(SettingsMixin, UrlsMixin, UserInterfaceMixin, InvenTreePlu
     }
 
     # ------------------------------------------------------------------
+    # Permission helpers
+    # ------------------------------------------------------------------
+    @staticmethod
+    def _has_bom_role(request, permission: str) -> bool:
+        return check_user_role(request.user, 'bom', permission)
+
+    def _can_access_page(self, request) -> bool:
+        return any(
+            self._has_bom_role(request, permission)
+            for permission in ('view', 'add', 'change')
+        )
+
+    # ------------------------------------------------------------------
     # URL views
     # ------------------------------------------------------------------
     def view_index(self, request, *args, **kwargs):
         if not request.user.is_authenticated:
             return HttpResponse('请先登录 InvenTree 后再打开 BOM Import。', status=403)
+
+        if not self._can_access_page(request):
+            return HttpResponse('没有 BOM 访问权限，请在管理中心的群组角色中调整。', status=403)
 
         page = Path(__file__).parent / 'static' / 'index.html'
         response = HttpResponse(
@@ -462,6 +479,8 @@ class BomImportPlugin(SettingsMixin, UrlsMixin, UserInterfaceMixin, InvenTreePlu
     def view_parse(self, request, *args, **kwargs):
         if not request.user.is_authenticated:
             return JsonResponse({'error': 'permission denied'}, status=403)
+        if not self._has_bom_role(request, 'add'):
+            return JsonResponse({'error': '没有 BOM 添加权限'}, status=403)
 
         upload = request.FILES.get('file')
         text = request.POST.get('text') or ''
@@ -488,6 +507,8 @@ class BomImportPlugin(SettingsMixin, UrlsMixin, UserInterfaceMixin, InvenTreePlu
     def view_match(self, request, *args, **kwargs):
         if not request.user.is_authenticated:
             return JsonResponse({'error': 'permission denied'}, status=403)
+        if not self._has_bom_role(request, 'view'):
+            return JsonResponse({'error': '没有 BOM 查看权限'}, status=403)
 
         import json
 
@@ -531,6 +552,8 @@ class BomImportPlugin(SettingsMixin, UrlsMixin, UserInterfaceMixin, InvenTreePlu
     def view_search(self, request, *args, **kwargs):
         if not request.user.is_authenticated:
             return JsonResponse({'error': 'permission denied'}, status=403)
+        if not self._has_bom_role(request, 'view'):
+            return JsonResponse({'error': '没有 BOM 查看权限'}, status=403)
 
         query = (request.GET.get('q') or '').strip()
         if not query:
@@ -643,13 +666,15 @@ class BomImportPlugin(SettingsMixin, UrlsMixin, UserInterfaceMixin, InvenTreePlu
             'shortage': float(total_shortage),
         }
 
-    @require_http_methods(['POST'])
     def view_deduct(self, request, *args, **kwargs):
         if not request.user.is_authenticated:
             return JsonResponse({'error': 'permission denied'}, status=403)
 
-        if not StockItem.check_related_permission('change', request.user):
-            return JsonResponse({'error': '没有修改库存的权限'}, status=403)
+        if not self._has_bom_role(request, 'change'):
+            return JsonResponse({'error': '没有 BOM 更改权限'}, status=403)
+
+        if not check_user_role(request.user, 'stock', 'change'):
+            return JsonResponse({'error': '没有库存更改权限'}, status=403)
 
         import json
 
@@ -698,6 +723,16 @@ class BomImportPlugin(SettingsMixin, UrlsMixin, UserInterfaceMixin, InvenTreePlu
         # 前端路由页会加载独立的 /plugin/bom-import/ 页面。
         if not self.get_setting('ENABLE_NAVIGATION'):
             return []
+
+        # 只有拥有 BOM 角色权限的用户才显示入口
+        if not request.user.is_authenticated:
+            return []
+        if not any(
+            check_user_role(request.user, 'bom', permission)
+            for permission in ('view', 'add', 'change')
+        ):
+            return []
+
         return [
             {
                 'key': 'bom-import-nav',
@@ -707,20 +742,3 @@ class BomImportPlugin(SettingsMixin, UrlsMixin, UserInterfaceMixin, InvenTreePlu
             }
         ]
 
-    def get_ui_dashboard_items(self, request, context, **kwargs):
-        if not self.get_setting('ENABLE_NAVIGATION'):
-            return []
-        return [
-            {
-                'key': 'bom-import-dashboard',
-                'title': str(_('BOM Import / Match')),
-                'description': str(
-                    _('Import a BOM file and match every line against the part library')
-                ),
-                'icon': 'ti:file-import:outline',
-                'source': self.plugin_static_file(
-                    'dashboard.js:renderBomImportDashboard', check_hash=False
-                ),
-                'options': {'width': 6, 'height': 4},
-            }
-        ]
