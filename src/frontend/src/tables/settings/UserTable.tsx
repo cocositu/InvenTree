@@ -376,7 +376,13 @@ export function UserTable({
       password: { field_type: 'password' },
       override_warning: {}
     },
-    successMessage: t`Password updated`
+    successMessage: t`Password updated`,
+    // Refresh the table after a successful password change.
+    //
+    // The sibling actions all pass `table` (deleteUser below, newUser via
+    // userFields(table)), but this one did not, so the table kept rendering
+    // the pre-change data until the page was reloaded.
+    table: table
   });
 
   const tableActions = useMemo(() => {
