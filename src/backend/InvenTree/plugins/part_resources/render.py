@@ -543,7 +543,9 @@ def render_symbol(text: str, size: int = 256, ref: str = None, show_labels=True)
                 draw.ellipse([px - r, py - r, px + r, py + r], outline=PIN, width=stroke_width(node, 0.254))
 
     # 引脚 + 编号 / 名称
-    font = _load_font(max(8, min(28, int(size / 30))))
+    # 字号按 KiCad 默认 1.27mm 文字与当前视口比例计算，避免 2.54mm 间距下文字重叠
+    label_px = max(8, min(20, int(1.4 * vp.scale)))
+    font = _load_font(label_px)
 
     for pin in pins:
         at = find_one(pin, 'at')
@@ -561,7 +563,7 @@ def render_symbol(text: str, size: int = 256, ref: str = None, show_labels=True)
 
         draw.line([p0, p1], fill=PIN, width=max(1, int(0.15 * vp.scale)))
 
-        if not show_labels or size < 192:
+        if not show_labels or size < 320:
             continue
 
         name_node = find_one(pin, 'name')
@@ -575,22 +577,23 @@ def render_symbol(text: str, size: int = 256, ref: str = None, show_labels=True)
             ux, uy = 1.0, 0.0
         else:
             ux, uy = vx / length, vy / length
-        px, py = -uy, ux
 
         anchor_x = (p0[0] + p1[0]) / 2.0
         anchor_y = (p0[1] + p1[1]) / 2.0
-        scale_font = max(8, min(28, int(size / 30)))
+        offset = label_px * 0.9
 
         if pin_number:
-            pos = (anchor_x + px * scale_font * 0.8, anchor_y + py * scale_font * 0.8)
-            _draw_text(draw, pos, pin_number, font, (55, 55, 55), halo=BG)
+            # 水平引脚：编号放线条上方；垂直引脚：编号放线条右侧
+            if abs(ux) >= abs(uy):
+                pos = (anchor_x, anchor_y - offset)
+            else:
+                pos = (anchor_x + offset, anchor_y)
+            _draw_text(draw, pos, pin_number, font, (40, 40, 40), halo=BG)
 
         if pin_name:
-            pos = (
-                p1[0] + ux * scale_font * 0.8 + px * scale_font * 0.4,
-                p1[1] + uy * scale_font * 0.8 + py * scale_font * 0.4,
-            )
-            _draw_text(draw, pos, pin_name, font, (88, 88, 88), halo=BG)
+            # 名称沿引脚方向进入器件体内，避免压住引脚连接端
+            pos = (p1[0] + ux * offset, p1[1] + uy * offset)
+            _draw_text(draw, pos, pin_name, font, (72, 72, 72), halo=BG)
 
     return img
 

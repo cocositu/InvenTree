@@ -23,15 +23,21 @@ InvenTree 原生已经具备以下能力，本插件**不重复实现**：
 """
 
 import io
+import logging
 import zipfile
 
 from django.http import HttpResponse, JsonResponse
 from django.urls import path
+import logging
+
+logger = logging.getLogger('inventree.plugins.part_resources')
+
 from django.utils.translation import gettext_lazy as _
 from rest_framework import permissions
 
 from common.models import Attachment
 
+from . import kicad_cli
 from . import render as renderer
 from part.models import BomItem, Part
 from plugin import InvenTreePlugin
@@ -74,6 +80,9 @@ RENDERABLE_SUFFIXES = RENDERABLE_2D_SUFFIXES + RENDERABLE_3D_SUFFIXES
 KIND_LABELS = {kind: str(label) for kind, label, _, _ in RESOURCE_KINDS}
 KIND_ORDER = [kind for kind, _, _, _ in RESOURCE_KINDS] + ['other']
 KIND_LABELS['other'] = str(_('Other'))
+
+# 进程内缓存 kicad-cli 生成的 SVG（超时/文件变化后自动失效）
+_KICAD_SVG_CACHE = {}
 
 
 def classify_attachment(attachment) -> str:
@@ -163,6 +172,14 @@ def serialize_attachment(plugin, attachment) -> dict:
     elif renderable:
         thumbnail = plugin._ensure_thumbnail(attachment)
 
+    # 缓存版本：换成官方 kicad-cli / cascadio 后，旧浏览器缓存必须失效
+    if lower.endswith(('.kicad_mod', '.kicad_sym', '.mod', '.pretty')):
+        render_version = f'{attachment.file_size or 0}-kicad-cli-v2'
+    elif is_3d:
+        render_version = f'{attachment.file_size or 0}-cascadio-v2'
+    else:
+        render_version = str(attachment.file_size or 0)
+
     # 可交互元数据：KiCad 封装图层、引脚数量等（首次解析后缓存进 metadata）
     resource_meta = {}
     if renderable and not is_external:
@@ -184,6 +201,7 @@ def serialize_attachment(plugin, attachment) -> dict:
         'thumbnail': thumbnail,
         'layers': resource_meta.get('layers', []),
         'pin_count': resource_meta.get('pin_count', 0),
+        'render_version': render_version,
         'size': attachment.file_size or 0,
         'upload_date': attachment.upload_date.isoformat()
         if attachment.upload_date
@@ -220,6 +238,25 @@ class PartResourcesPlugin(SettingsMixin, UrlsMixin, UserInterfaceMixin, InvenTre
             'default': True,
             'validator': bool,
         },
+        'USE_KICAD_CLI': {
+            'name': _('Use KiCad CLI'),
+            'description': _(
+                'Use the official kicad-cli to render .kicad_mod / .kicad_sym previews. '
+                'Falls back to the built-in renderer when unavailable.'
+            ),
+            'default': True,
+            'validator': bool,
+        },
+        'KICAD_CLI_PATH': {
+            'name': _('KiCad CLI Path'),
+            'description': _(
+                'Optional path or command prefix for kicad-cli. '
+                'Linux/Debian: /usr/bin/kicad-cli. '
+                'Leave empty for automatic detection.'
+            ),
+            'default': '',
+            'validator': str,
+        },
     }
 
     # ------------------------------------------------------------------
@@ -244,6 +281,15 @@ class PartResourcesPlugin(SettingsMixin, UrlsMixin, UserInterfaceMixin, InvenTre
         if not self.get_setting('ENABLE_3D_PREVIEW'):
             return False
         return renderer.step_renderer_available()
+
+    def _kicad_cli_prefix(self):
+        """返回 kicad-cli 命令前缀，未检测到返回 None。"""
+        if not self.get_setting('USE_KICAD_CLI'):
+            return None
+        try:
+            return kicad_cli.detect(self.get_setting('KICAD_CLI_PATH') or '')
+        except Exception:
+            return None
 
     def _describe_attachment(self, attachment, name):
         """解析附件的可交互元数据，并缓存到 Attachment.metadata。"""
@@ -424,7 +470,26 @@ class PartResourcesPlugin(SettingsMixin, UrlsMixin, UserInterfaceMixin, InvenTre
         if not data:
             return None
 
-        img = renderer.render_attachment_preview(name, data, self.THUMBNAIL_SIZE)
+        lower_name = (name or '').lower()
+
+        # 官方 kicad-cli 优先：SVG -> rsvg-convert/cairosvg -> PNG 缩略图
+        img = None
+        if lower_name.endswith(('.kicad_mod', '.kicad_sym', '.mod', '.pretty')):
+            try:
+                img = kicad_cli.render_thumbnail(
+                    name,
+                    data,
+                    size=self.THUMBNAIL_SIZE,
+                    preferred=self.get_setting('KICAD_CLI_PATH') or '',
+                )
+            except Exception as exc:
+                logger.warning('kicad-cli thumbnail failed for %s: %s', name, exc)
+                img = None
+
+        # 回退：内置 Pillow 渲染器（KiCad / STEP 等）
+        if img is None:
+            img = renderer.render_attachment_preview(name, data, self.THUMBNAIL_SIZE)
+
         if not img:
             return None
 
@@ -471,6 +536,35 @@ class PartResourcesPlugin(SettingsMixin, UrlsMixin, UserInterfaceMixin, InvenTre
         if not data:
             return JsonResponse({'error': 'Not a renderable attachment'}, status=400)
 
+        # 优先使用官方 kicad-cli 渲染 KiCad 封装 / 符号
+        lower_name = (name or '').lower()
+        cli_prefix = self._kicad_cli_prefix()
+        if cli_prefix and lower_name.endswith(('.kicad_mod', '.kicad_sym', '.mod', '.pretty')):
+            cache_key = (attachment.pk, tuple(layers or []), attachment.file_size or 0)
+            svg = _KICAD_SVG_CACHE.get(cache_key)
+
+            if svg is None:
+                try:
+                    svg = kicad_cli.render_preview(
+                        name,
+                        data,
+                        layers=layers,
+                        timeout=90,
+                        preferred=self.get_setting('KICAD_CLI_PATH') or '',
+                    )
+                except Exception as exc:
+                    logger.warning('kicad-cli preview failed for %s: %s', name, exc)
+                    svg = None
+                else:
+                    if len(_KICAD_SVG_CACHE) > 128:
+                        _KICAD_SVG_CACHE.clear()
+                    _KICAD_SVG_CACHE[cache_key] = svg
+
+            if svg:
+                response = HttpResponse(svg, content_type='image/svg+xml')
+                response['Cache-Control'] = 'public, max-age=86400'
+                return response
+
         img = renderer.render_attachment_preview(name, data, size, layers=layers)
         if not img:
             return JsonResponse({'error': 'No renderer for this file type'}, status=415)
@@ -507,6 +601,30 @@ class PartResourcesPlugin(SettingsMixin, UrlsMixin, UserInterfaceMixin, InvenTre
             return JsonResponse({'error': 'Unable to tessellate STEP / IGES'}, status=415)
 
         return JsonResponse(mesh)
+
+    def view_backend_status(self, request, *args, **kwargs):
+        """GET /plugin/part-resources/backend/
+
+        Return the detected kicad-cli path/version. Useful on Debian:
+
+            curl -H "Authorization: Token <token>" \
+                 http://127.0.0.1:8000/plugin/part-resources/backend/
+        """
+        prefix = self._kicad_cli_prefix()
+        if not prefix:
+            return JsonResponse({
+                'available': False,
+                'prefix': [],
+                'configured': self.get_setting('KICAD_CLI_PATH') or '',
+                'version': '',
+            })
+
+        return JsonResponse({
+            'available': True,
+            'prefix': prefix,
+            'configured': self.get_setting('KICAD_CLI_PATH') or '',
+            'version': kicad_cli.version(prefix),
+        })
 
     # ------------------------------------------------------------------
     # BOM 联动
@@ -711,6 +829,11 @@ class PartResourcesPlugin(SettingsMixin, UrlsMixin, UserInterfaceMixin, InvenTre
                 name='part-resources-mesh',
             ),
             path(
+                'backend/',
+                self.view_backend_status,
+                name='part-resources-backend',
+            ),
+            path(
                 'bom/<int:part_id>/',
                 self.view_bom_resources,
                 name='part-resources-bom',
@@ -740,7 +863,7 @@ class PartResourcesPlugin(SettingsMixin, UrlsMixin, UserInterfaceMixin, InvenTre
                     'title': str(_('Design Resources')),
                     'icon': 'ti:files:outline',
                     'source': self.plugin_static_file(
-                        'panel-74c33db8c5.js:renderPartPanel', check_hash=False
+                        'panel-4c1cf4349d.js:renderPartPanel', check_hash=False
                     ),
                 }
             )

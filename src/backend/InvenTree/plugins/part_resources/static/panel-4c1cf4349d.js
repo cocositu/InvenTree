@@ -17,7 +17,7 @@
   const link = document.createElement('link');
   link.id = 'part-resources-panel-style';
   link.rel = 'stylesheet';
-  link.href = '/static/plugins/part-resources/panel.css?v=4';
+  link.href = '/static/plugins/part-resources/panel.css?v=5';
   document.head.appendChild(link);
 })();
 
@@ -52,9 +52,15 @@ function escapeHtml(value) {
     .replaceAll("'", '&#39;');
 }
 
+function versionedUrl(url, item) {
+  if (!url || url === '#') return url;
+  const separator = url.includes('?') ? '&' : '?';
+  return `${url}${separator}v=${encodeURIComponent(item.render_version || item.size || 0)}`;
+}
+
 function thumbHtml(item) {
   if (item.thumbnail) {
-    return `<img class="pr-thumb" src="${escapeHtml(item.thumbnail)}" alt="" loading="lazy">`;
+    return `<img class="pr-thumb" src="${escapeHtml(versionedUrl(item.thumbnail, item))}" alt="" loading="lazy">`;
   }
   return `<span class="pr-thumb pr-thumb-empty"><i class="${KIND_ICONS[item.kind] || KIND_ICONS.other}"></i></span>`;
 }
@@ -187,12 +193,15 @@ function renderHeader(payload) {
 
 function previewUrlFor(item, layers) {
   const base = item.preview_url || item.url || item.download_url || '#';
-  if (base === '#' || !base.startsWith('/plugin/')) return base;
+  if (!base || base === '#') return base;
+
   const params = new URLSearchParams();
   params.set('size', '1024');
+  params.set('v', String(item.render_version || item.size || 0));
   if (layers && layers.length) {
     params.set('layers', layers.join(','));
   }
+
   return `${base}${base.includes('?') ? '&' : '?'}${params.toString()}`;
 }
 
@@ -295,8 +304,22 @@ function openResourceViewer(pk) {
     image.className = 'pr-viewer-img';
     image.alt = item.comment || item.name || '';
 
+    const emptyHint = document.createElement('div');
+    emptyHint.className = 'pr-viewer-hint pr-viewer-empty';
+    emptyHint.textContent = '未选择图层。请在工具栏中选择要显示的层。';
+    emptyHint.style.display = 'none';
+
     const refresh = () => {
-      if (selected.size === 0 || selected.size === layers.length) {
+      if (selected.size === 0) {
+        image.style.display = 'none';
+        emptyHint.style.display = '';
+        return;
+      }
+
+      image.style.display = '';
+      emptyHint.style.display = 'none';
+
+      if (selected.size === layers.length) {
         image.src = previewUrlFor(item, null);
       } else {
         image.src = previewUrlFor(item, Array.from(selected));
@@ -312,8 +335,15 @@ function openResourceViewer(pk) {
       allButton.className = 'pr-layer-btn pr-layer-btn-all active';
       allButton.textContent = '全部';
       allButton.addEventListener('click', () => {
-        layers.forEach((layer) => selected.add(layer));
-        toolbar.querySelectorAll('.pr-layer-btn').forEach((btn) => btn.classList.add('active'));
+        // 全部按钮现在是真正的开关：全选时点一下就是全不选
+        if (selected.size === layers.length) {
+          selected.clear();
+          toolbar.querySelectorAll('.pr-layer-btn').forEach((btn) => btn.classList.remove('active'));
+        } else {
+          layers.forEach((layer) => selected.add(layer));
+          toolbar.querySelectorAll('.pr-layer-btn').forEach((btn) => btn.classList.add('active'));
+        }
+        allButton.classList.toggle('active', selected.size === layers.length);
         refresh();
       });
       toolbar.appendChild(allButton);
@@ -325,7 +355,6 @@ function openResourceViewer(pk) {
         button.textContent = layer;
         button.addEventListener('click', () => {
           if (selected.has(layer)) {
-            if (selected.size <= 1) return;
             selected.delete(layer);
             button.classList.remove('active');
           } else {
@@ -348,6 +377,7 @@ function openResourceViewer(pk) {
       body.appendChild(hint);
     }
 
+    body.appendChild(emptyHint);
     body.appendChild(image);
     refresh();
     return;
