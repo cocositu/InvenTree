@@ -94,6 +94,9 @@ export function LanguageContext({
     'loading' | 'loaded' | 'error'
   >('loading');
   const isMounted = useRef(true);
+  // 供超时回调读取最新状态：闭包里的 state 会拿到旧值
+  const loadedStateRef = useRef(loadedState);
+  loadedStateRef.current = loadedState;
 
   useEffect(() => {
     isMounted.current = true;
@@ -105,8 +108,28 @@ export function LanguageContext({
       lang = defaultLocale;
     }
 
+    /*
+     * 超时兜底。
+     *
+     * 本组件包裹整个应用，loadedState 停在 'loading' 时会渲染全屏
+     * LoadingOverlay。而 activateLocale() 内部是对语言包 chunk 的动态
+     * import —— 一旦该请求迟迟不返回（服务器卡顿、资源被中断），
+     * 应用就会永久停在全屏遮罩上，只能刷新恢复。
+     *
+     * 这里加一道保险：超时后直接放行，界面按回退语言渲染，绝不卡死。
+     */
+    const loadTimeout = setTimeout(() => {
+      if (isMounted.current && loadedStateRef.current === 'loading') {
+        console.warn(
+          'Locale bundle load timed out; continuing with the fallback locale.'
+        );
+        setLoadedState('loaded');
+      }
+    }, 8000);
+
     activateLocale(lang)
       .then(() => {
+        clearTimeout(loadTimeout);
         if (isMounted.current) setLoadedState('loaded');
 
         /*
@@ -152,11 +175,13 @@ export function LanguageContext({
       })
       /* istanbul ignore next */
       .catch((err) => {
+        clearTimeout(loadTimeout);
         console.error('ERR: Failed loading translations', err);
         if (isMounted.current) setLoadedState('error');
       });
 
     return () => {
+      clearTimeout(loadTimeout);
       isMounted.current = false;
     };
   }, [language]);

@@ -6,7 +6,7 @@ import {
   createSpotlight
 } from '@mantine/spotlight';
 import { IconSearch } from '@tabler/icons-react';
-import { type JSX, useEffect, useMemo, useState } from 'react';
+import { type JSX, useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 
 import { Boundary } from '@lib/components/Boundary';
@@ -120,6 +120,27 @@ export default function LayoutComponent() {
     setActions([...defaultActions, ...pluginActions]);
   }, [defaultActions.length, pluginActions.length, location]);
 
+  /*
+   * 页面切换过渡的动画重放。
+   *
+   * 原先这里是给容器加 key={location.pathname}，靠 React 重新挂载整棵路由
+   * 子树来触发动画。副作用是路由页面里的所有组件状态、订阅、定时器都会在
+   * 每次切换时重建 —— 长会话下容易出现监听器堆积、请求竞态，甚至页面卡住。
+   *
+   * 改为「移除动画类 -> 强制一次回流 -> 重新添加」：只重放 CSS 动画，
+   * 路由子树本身保持挂载，组件实例与状态全部保留。
+   * 代价仅是一次强制回流，且只发生在路由真正变化时。
+   */
+  const pageTransitionRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = pageTransitionRef.current;
+    if (!el) return;
+    el.classList.remove('it-page-enter');
+    void el.offsetWidth; // 强制回流，使动画能够重新开始
+    el.classList.add('it-page-enter');
+  }, [location.pathname]);
+
   return (
     <ProtectedRoute>
       <>
@@ -127,8 +148,9 @@ export default function LayoutComponent() {
           <Header />
           <Container className={classes.layoutContent} size='100%'>
             <Boundary label={'layout'}>
-              {/* 路由切换过渡：key 随 pathname 变化重新挂载，仅做 opacity/transform 动画 */}
-              <div className='it-page-enter' key={location.pathname}>
+              {/* 路由切换过渡容器。动画由下面的 effect 手动重放，
+                  而不是给容器加 key 强制重挂载 —— 详见 pageTransitionRef 的说明 */}
+              <div ref={pageTransitionRef} className='it-page-enter'>
                 <Outlet />
               </div>
             </Boundary>

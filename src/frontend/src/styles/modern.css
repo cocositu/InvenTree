@@ -510,3 +510,52 @@ html[data-it-font='mono'] {
 .mantine-Drawer-content {
   border-radius: 0;
 }
+/* --------------------------------------------------------------------------
+ * 13. 明度分层：应用外壳 vs 内容面
+ * --------------------------------------------------------------------------
+ * 量化诊断显示改造前整个界面 89.6% 的像素是近白色 —— 背景、卡片、表格、
+ * 工具栏全在同一明度层上，没有任何前后关系，这也是"平"和"廉价感"的来源。
+ *
+ * 现代高密度工具（Linear / Vercel / GitHub）的做法是：
+ *   应用外壳 = 浅灰（后退）   内容面 = 纯白（前进）
+ *
+ * 关键点：只改 body 的 background-color，不动 --mantine-color-body。
+ * Mantine 的 Paper / Card / DataTable 都消费 --mantine-color-body，
+ * 因此它们会保持白色，与灰色外壳自然拉开层次，无需逐个组件覆盖。
+ * -------------------------------------------------------------------------- */
+:root {
+  --it-app-bg: #F4F4F5;
+}
+
+[data-mantine-color-scheme='dark'] {
+  --it-app-bg: #191919;
+}
+
+body,
+#root {
+  background-color: var(--it-app-bg);
+}
+
+/* 内容容器不设底色，让外壳的灰透出来；白色只留给真正的"面" */
+.layoutContent,
+#root > div > div {
+  background-color: transparent;
+}
+
+/* 顶栏保持纯白并加一层极轻投影，与灰底形成"浮起"效果 */
+.mantine-AppShell-header,
+header {
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06);
+}
+
+/* 表格、扩音/折叠面板等内容面统一白底 */
+.mantine-datatable,
+.mantine-Accordion-item {
+  background-color: var(--mantine-color-body);
+}
+
+/* 深色模式下外壳更暗，内容面略亮，同样拉开层次 */
+[data-mantine-color-scheme='dark'] .mantine-datatable,
+[data-mantine-color-scheme='dark'] .mantine-Accordion-item {
+  background-color: var(--mantine-color-dark-6);
+}
