@@ -184,7 +184,7 @@ class PartResourcesPlugin(SettingsMixin, UrlsMixin, UserInterfaceMixin, InvenTre
         """返回该物料的全部附件。"""
         return list(
             Attachment.objects.filter(
-                model_type='part.part', model_id=part.pk
+                model_type='part', model_id=part.pk
             ).order_by('pk')
         )
 
