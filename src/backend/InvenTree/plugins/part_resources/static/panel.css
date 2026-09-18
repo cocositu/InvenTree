@@ -1,0 +1,44 @@
+/* 元器件设计资源面板样式（使用 Mantine 的 CSS 变量，自动适配深色模式） */
+.pr-header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.pr-supplier{margin-left:10px;font-size:12px;color:var(--mantine-primary-color-filled);text-decoration:none}
+.pr-pack{display:inline-block;padding:6px 14px;border-radius:8px;font-size:13px;font-weight:600;
+  background:var(--mantine-primary-color-filled);color:#fff;text-decoration:none;
+  transition:box-shadow 140ms ease,transform 140ms ease}
+.pr-pack:hover{box-shadow:0 2px 8px rgba(16,24,40,.16);transform:translateY(-1px)}
+.pr-section{margin-bottom:14px}
+.pr-section-title{display:flex;align-items:center;gap:6px;margin:0 0 6px;font-size:13px;font-weight:600;
+  color:var(--mantine-color-gray-6);border-bottom:1px solid var(--mantine-color-gray-2);padding-bottom:4px}
+.pr-count{display:inline-block;min-width:18px;padding:0 5px;border-radius:9px;font-size:11px;text-align:center;
+  background:var(--mantine-color-gray-1);color:var(--mantine-color-gray-6)}
+.pr-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:6px 8px;border-radius:6px;
+  transition:background-color 120ms linear}
+.pr-row:hover{background:var(--mantine-color-gray-0)}
+.pr-row-main{display:flex;align-items:center;gap:8px;min-width:0}
+.pr-thumb{width:28px;height:28px;object-fit:contain;border-radius:4px;flex-shrink:0;
+  border:1px solid var(--mantine-color-gray-2);background:#fff}
+.pr-row-text{min-width:0}
+.pr-link{font-size:13px;font-weight:500;color:var(--mantine-color-text);text-decoration:none;
+  display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pr-link:hover{color:var(--mantine-primary-color-filled);text-decoration:underline}
+.pr-meta{font-size:11px;color:var(--mantine-color-gray-6);margin-top:1px}
+.pr-badge{margin-left:6px;padding:1px 5px;border-radius:4px;font-size:10px;
+  background:var(--mantine-color-gray-1);color:var(--mantine-color-gray-7)}
+.pr-actions{display:flex;gap:6px;flex-shrink:0}
+.pr-btn{padding:3px 10px;border-radius:6px;font-size:12px;text-decoration:none;
+  border:1px solid var(--mantine-color-gray-3);color:var(--mantine-color-text);
+  transition:background-color 120ms linear,border-color 120ms linear}
+.pr-btn:hover{background:var(--mantine-color-gray-1);border-color:var(--mantine-color-gray-4)}
+.pr-empty{padding:16px;text-align:center;color:var(--mantine-color-gray-6)}
+.pr-hint{font-size:12px;line-height:1.7;max-width:520px;margin:8px auto 0}
+.pr-loading{padding:12px;color:var(--mantine-color-gray-6)}
+
+[data-mantine-color-scheme='dark'] .pr-section-title{border-bottom-color:var(--mantine-color-dark-4)}
+[data-mantine-color-scheme='dark'] .pr-count{background:var(--mantine-color-dark-5);color:var(--mantine-color-dark-1)}
+[data-mantine-color-scheme='dark'] .pr-row:hover{background:var(--mantine-color-dark-6)}
+[data-mantine-color-scheme='dark'] .pr-thumb{border-color:var(--mantine-color-dark-4)}
+[data-mantine-color-scheme='dark'] .pr-meta,
+[data-mantine-color-scheme='dark'] .pr-loading,
+[data-mantine-color-scheme='dark'] .pr-empty{color:var(--mantine-color-dark-2)}
+[data-mantine-color-scheme='dark'] .pr-badge{background:var(--mantine-color-dark-5);color:var(--mantine-color-dark-1)}
+[data-mantine-color-scheme='dark'] .pr-btn{border-color:var(--mantine-color-dark-4)}
+[data-mantine-color-scheme='dark'] .pr-btn:hover{background:var(--mantine-color-dark-5);border-color:var(--mantine-color-dark-3)}

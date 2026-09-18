@@ -104,7 +104,9 @@ node_modules/
 maintenance_mode_state.txt
 
 # plugin dev directory
-src/backend/InvenTree/plugins/
+# NOTE: we ship a first-party plugin at src/backend/InvenTree/plugins/part_resources
+# (design resources: classification + zip download), so this directory is tracked.
+# InvenTree discovers it automatically - see plugin/registry.py plugin_dirs().
 
 # Compiled translation files
 *.mo
