@@ -1,0 +1,8 @@
+# 可选依赖：STEP / IGES 3D 缩略图与高清预览
+# 安装方式：
+#   <InvenTree venv>/python -m pip install -r <此文件>
+#
+# cascadio 负责 STEP/IGES -> GLB 的高精度网格转换；
+# numpy 是 cascadio Python 包导入时的运行时依赖。
+cascadio>=0.1.1
+numpy>=2.0
