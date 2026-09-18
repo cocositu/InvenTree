@@ -299,9 +299,15 @@ function NavTabs() {
     });
     // dynamic content
     extraNavs.forEach((nav) => {
+      const navUrl = nav.options.options.url || '';
+      const navValue =
+        nav.options.options.value ||
+        navUrl.split('/').filter(Boolean)[0] ||
+        nav.options.key;
+
       _tabs.push(
         <Tabs.Tab
-          value={nav.options.title}
+          value={navValue}
           key={nav.options.key}
           onClick={(event: any) =>
             navigateToLink(nav.options.options.url, navigate, event)
