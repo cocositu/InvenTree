@@ -312,12 +312,19 @@ function observeProfile() {
     // set profile theme
     if (user.profile?.theme) {
       // extract keys of usertheme and set them to the values of user.profile.theme
-      const newTheme = Object.keys(userTheme).map((key) => {
-        return {
-          key: key as keyof typeof userTheme,
-          value: user.profile.theme[key] as string
-        };
-      });
+      // 只合并服务端"确实存在"的键。
+      //
+      // 原实现按 userTheme 的全部键取值，服务端存的是残缺对象时，
+      // 缺失的键会变成 undefined，zustand persist 又是整体替换，
+      // 最终 primaryColor 变成 undefined -> MantineProvider 校验失败 -> 白屏。
+      const newTheme = Object.keys(userTheme)
+        .filter((key) => user.profile.theme[key] != null)
+        .map((key) => {
+          return {
+            key: key as keyof typeof userTheme,
+            value: user.profile.theme[key] as string
+          };
+        });
       const diff = newTheme.filter(
         (item) => userTheme[item.key] !== item.value
       );
