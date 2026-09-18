@@ -607,10 +607,7 @@ export async function renderPartPanel(target, data) {
       headers: { Accept: 'application/json' }
     };
 
-    const [listRes, bomRes] = await Promise.all([
-      fetch(`/plugin/part-resources/list/${partId}/`, options),
-      fetch(`/plugin/part-resources/bom/${partId}/`, options).catch(() => null)
-    ]);
+    const listRes = await fetch(`/plugin/part-resources/list/${partId}/`, options);
 
     if (!listRes.ok) {
       throw new Error(`HTTP ${listRes.status}`);
@@ -623,22 +620,6 @@ export async function renderPartPanel(target, data) {
       }
     }
 
-    let bomPayload = null;
-    if (bomRes && bomRes.ok) {
-      try {
-        bomPayload = await bomRes.json();
-      } catch (_err) {
-        bomPayload = null;
-      }
-      for (const line of bomPayload?.lines || []) {
-        for (const item of line.resources || []) {
-          if (!resourceIndex.has(String(item.pk))) {
-            resourceIndex.set(String(item.pk), item);
-          }
-        }
-      }
-    }
-
     target.onclick = (event) => {
       const trigger = event.target.closest('[data-preview-pk]');
       if (!trigger || !target.contains(trigger)) return;
@@ -648,9 +629,7 @@ export async function renderPartPanel(target, data) {
       openResourceViewer(pk);
     };
 
-    const bomHtml = renderBomSection(bomPayload);
-
-    if (!payload.total && !bomHtml) {
+    if (!payload.total) {
       target.innerHTML = `
         <div class="pr-empty">
           <p>该物料还没有设计资源。</p>
@@ -663,7 +642,7 @@ export async function renderPartPanel(target, data) {
       return;
     }
 
-    target.innerHTML = `${renderHeader(payload)}${renderResourceSections(payload)}${bomHtml}`;
+    target.innerHTML = `${renderHeader(payload)}${renderResourceSections(payload)}`;
   } catch (err) {
     target.innerHTML = `<p style="color:var(--mantine-color-red-6)">加载设计资源失败：${escapeHtml(err.message)}</p>`;
   }

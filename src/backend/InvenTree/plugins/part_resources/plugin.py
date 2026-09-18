@@ -898,7 +898,7 @@ class PartResourcesPlugin(SettingsMixin, UrlsMixin, UserInterfaceMixin, InvenTre
                     'title': str(_('Design Resources')),
                     'icon': 'ti:files:outline',
                     'source': self.plugin_static_file(
-                        'panel-f54cd5d491.js:renderPartPanel', check_hash=False
+                        'panel-ecaafef7c2.js:renderPartPanel', check_hash=False
                     ),
                 }
             )

@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BOM Import / Match</title>
+<style>
+  :root{--bg:#f6f7f9;--card:#fff;--line:#e5e7eb;--text:#111827;--muted:#6b7280;
+    --blue:#2563eb;--green:#059669;--orange:#d97706;--red:#dc2626}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,"Microsoft YaHei",sans-serif}
+  header{background:#111827;color:#fff;padding:14px 22px;display:flex;align-items:center;justify-content:space-between}
+  header h1{margin:0;font-size:18px;font-weight:650}
+  header .hint{color:#9ca3af;font-size:12px}
+  main{max-width:1600px;margin:0 auto;padding:18px 22px 60px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
+  .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  textarea{width:100%;min-height:110px;border:1px solid var(--line);border-radius:8px;padding:10px;font-family:ui-monospace,Consolas,monospace;font-size:12px}
+  input[type=file]{padding:6px;border:1px dashed var(--line);border-radius:8px;background:#fafafa}
+  button{border:0;border-radius:8px;padding:8px 14px;cursor:pointer;font-size:13px;font-weight:600}
+  button.primary{background:var(--blue);color:#fff}
+  button.ghost{background:#eef2ff;color:#3730a3}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  .summary{display:flex;gap:10px;flex-wrap:wrap;margin:8px 0 14px}
+  .stat{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 14px;min-width:120px}
+  .stat b{display:block;font-size:20px;line-height:1.1}
+  .stat span{color:var(--muted);font-size:12px}
+  table{width:100%;border-collapse:collapse;font-size:12px}
+  th,td{border-bottom:1px solid var(--line);padding:7px 8px;text-align:left;vertical-align:top}
+  th{background:#fafafa;position:sticky;top:0;z-index:2;font-weight:650}
+  tr:hover td{background:#fafcff}
+  .status{padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap}
+  .status.matched{background:#d1fae5;color:#065f46}
+  .status.review{background:#fef3c7;color:#92400e}
+  .status.unmatched{background:#fee2e2;color:#991b1b}
+  .muted{color:var(--muted)}
+  .mono{font-family:ui-monospace,Consolas,monospace}
+  select{max-width:280px;padding:4px;border:1px solid var(--line);border-radius:6px;background:#fff}
+  a{color:var(--blue);text-decoration:none}
+  .error{color:var(--red);font-size:13px;white-space:pre-wrap}
+  .hidden{display:none}
+  .legend{font-size:12px;color:var(--muted);margin-top:6px}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>BOM Import / Match</h1>
+    <div class="hint">导入 BOM 表 → 匹配库内元器件 → 汇总位号 / 数量 / 库存 / 缺料</div>
+  </div>
+  <div><a style="color:#93c5fd" href="/web/">返回 InvenTree</a></div>
+</header>
+<main>
+  <div class="card">
+    <div class="toolbar">
+      <input type="file" id="file" accept=".csv,.txt,.xlsx,.xlsm">
+      <button class="primary" id="btnFile">上传并解析</button>
+      <span class="muted">或直接粘贴 CSV / 表数据：</span>
+      <button class="ghost" id="btnText">粘贴内容解析</button>
+      <button class="ghost" id="btnDemo">填入示例</button>
+    </div>
+    <div style="margin-top:10px"><textarea id="text" placeholder="Designator,Quantity,Comment,Footprint,MPN&#10;R1,1,10k,0603,..."></textarea></div>
+    <div id="mapping" class="legend"></div>
+    <div id="error" class="error"></div>
+  </div>
+
+  <div id="resultCard" class="card hidden">
+    <div class="toolbar" style="justify-content:space-between">
+      <div class="summary" id="summary"></div>
+      <div>
+        <button class="ghost" id="btnExport">导出匹配结果 CSV</button>
+      </div>
+    </div>
+    <div style="overflow:auto;max-height:70vh;border:1px solid var(--line);border-radius:8px">
+      <table id="table"><thead></thead><tbody></tbody></table>
+    </div>
+    <div class="legend">匹配只是在建议，最终请人工确认；点击匹配元件名可跳转 InvenTree 零件详情。</div>
+  </div>
+</main>
+<script>
+const $ = (s) => document.querySelector(s);
+const state = { rows: [], results: [] };
+
+function csrfToken(){
+  const match = document.cookie.match(/(?:^|; )csrftoken=([^;]+)/);
+  return match ? decodeURIComponent(match[1]) : '';
+}
+
+async function postJSON(url, payload){
+  const res = await fetch(url, {
+    method:'POST', credentials:'include',
+    headers:{'Content-Type':'application/json','X-CSRFToken':csrfToken()},
+    body: JSON.stringify(payload)
+  });
+  const data = await res.json();
+  if(!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+  return data;
+}
+
+async function postForm(url, formData){
+  const res = await fetch(url, {
+    method:'POST', credentials:'include',
+    headers:{'X-CSRFToken':csrfToken()},
+    body: formData
+  });
+  const data = await res.json();
+  if(!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+  return data;
+}
+
+function showError(message){ $('#error').textContent = message || ''; }
+function escapeHtml(value){ return String(value ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;'); }
+
+async function runMatch(parsed){
+  state.rows = parsed.rows || [];
+  $('#mapping').textContent = '识别到的列: ' + Object.entries(parsed.mapping || {}).map(([k,v]) => `${k} → 第${v+1}列`).join('，');
+  if(!state.rows.length){ throw new Error('没有解析到数据行'); }
+  const data = await postJSON('/plugin/bom-import/match/', { rows: state.rows });
+  state.results = data.rows || [];
+  render(data.summary || {});
+}
+
+function render(summary){
+  $('#resultCard').classList.remove('hidden');
+
+  const stats = [
+    ['总行数', summary.total || 0],
+    ['已匹配', summary.matched || 0],
+    ['待确认', summary.review || 0],
+    ['未匹配', summary.unmatched || 0],
+    ['总需求数量', summary.total_quantity || 0],
+    ['缺料数量', summary.shortage || 0],
+  ];
+  $('#summary').innerHTML = stats.map(([label,value]) =>
+    `<div class="stat"><b>${escapeHtml(value)}</b><span>${escapeHtml(label)}</span></div>`).join('');
+
+  const head = ['行','位号','数量','规格 / Value','封装','MPN / LCSC','匹配元件','匹配度','库存','缺料','状态'];
+  $('#table thead').innerHTML = '<tr>' + head.map(h => `<th>${h}</th>`).join('') + '</tr>';
+
+  $('#table tbody').innerHTML = state.results.map((row, index) => {
+    const candidates = row.candidates || [];
+    const selected = candidates[0] || null;
+    const options = candidates.map((cand, i) =>
+      `<option value="${i}">${escapeHtml(cand.name)}${cand.ipn ? ' / ' + escapeHtml(cand.ipn) : ''} · ${Math.round(cand.score*100)}%</option>`
+    ).join('');
+    const link = selected
+      ? `<a href="/web/part/${selected.pk}/details" target="_blank" rel="noopener">${escapeHtml(selected.name)}</a>${selected.ipn ? `<div class="muted mono">${escapeHtml(selected.ipn)}</div>` : ''}`
+      : '<span class="muted">— 无候选 —</span>';
+
+    return `<tr data-index="${index}">
+      <td class="muted">${row.line || index+1}</td>
+      <td class="mono">${escapeHtml(row.designators || '')}</td>
+      <td>${escapeHtml(row.quantity || '')}</td>
+      <td>${escapeHtml(row.comment || '')}</td>
+      <td>${escapeHtml(row.footprint || '')}</td>
+      <td class="mono">${escapeHtml(row.mpn || row.lcsc || '')}</td>
+      <td>${link}${candidates.length > 1 ? `<div style="margin-top:4px"><select data-select-index="${index}">${options}</select></div>` : ''}</td>
+      <td>${Math.round((row.score || 0) * 100)}%<div class="muted">${escapeHtml((selected?.matched_on || []).join(', '))}</div></td>
+      <td>${Number(row.stock || 0).toFixed(0)}</td>
+      <td>${Number(row.shortage || 0).toFixed(0)}</td>
+      <td><span class="status ${row.status}">${statusText(row.status)}</span></td>
+    </tr>`;
+  }).join('');
+
+  document.querySelectorAll('[data-select-index]').forEach(select => {
+    select.addEventListener('change', (event) => {
+      const index = Number(event.target.getAttribute('data-select-index'));
+      const candidate = state.results[index].candidates[Number(event.target.value)];
+      if(!candidate) return;
+      state.results[index].candidates = [candidate, ...state.results[index].candidates.filter(c => c !== candidate)];
+      state.results[index].score = candidate.score;
+      state.results[index].stock = candidate.stock;
+      state.results[index].shortage = Math.max(0, Number(state.results[index].quantity || 0) - Number(candidate.stock || 0));
+      state.results[index].status = candidate.score >= 0.9 ? 'matched' : (candidate.score >= 0.65 ? 'review' : 'unmatched');
+      render(computeSummary());
+    });
+  });
+}
+
+function computeSummary(){
+  const results = state.results;
+  return {
+    total: results.length,
+    matched: results.filter(r => r.status === 'matched').length,
+    review: results.filter(r => r.status === 'review').length,
+    unmatched: results.filter(r => r.status === 'unmatched').length,
+    total_quantity: results.reduce((sum,r) => sum + Number(r.quantity || 0), 0),
+    shortage: results.filter(r => r.status === 'matched').reduce((sum,r) => sum + Number(r.shortage || 0), 0),
+  };
+}
+
+function statusText(status){
+  return status === 'matched' ? '已匹配' : status === 'review' ? '待确认' : '未匹配';
+}
+
+async function parseFile(){
+  const file = $('#file').files[0];
+  if(!file){ showError('请先选择 BOM 文件'); return; }
+  showError('');
+  const form = new FormData();
+  form.append('file', file);
+  try {
+    const parsed = await postForm('/plugin/bom-import/parse/', form);
+    await runMatch(parsed);
+  } catch(err){ showError(err.message); }
+}
+
+async function parseText(){
+  const text = $('#text').value;
+  if(!text.trim()){ showError('请先粘贴 BOM 表内容'); return; }
+  showError('');
+  const form = new FormData();
+  form.append('text', text);
+  try {
+    const parsed = await postForm('/plugin/bom-import/parse/', form);
+    await runMatch(parsed);
+  } catch(err){ showError(err.message); }
+}
+
+function exportCSV(){
+  const headers = ['line','designators','quantity','comment','footprint','mpn','lcsc','part_name','part_ipn','score','stock','shortage','status'];
+  const lines = [headers.join(',')];
+  for(const row of state.results){
+    const part = row.candidates?.[0] || {};
+    lines.push([
+      row.line, row.designators, row.quantity, row.comment, row.footprint,
+      row.mpn, row.lcsc, part.name || '', part.ipn || '',
+      Math.round((row.score||0)*100), Math.round(row.stock||0), Math.round(row.shortage||0), statusText(row.status)
+    ].map(value => `"${String(value ?? '').replaceAll('"','""')}"`).join(','));
+  }
+  const blob = new Blob(['\ufeff' + lines.join('\n')], {type:'text/csv;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'bom-match-result.csv'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+$('#btnFile').addEventListener('click', parseFile);
+$('#btnText').addEventListener('click', parseText);
+$('#btnExport').addEventListener('click', exportCSV);
+$('#btnDemo').addEventListener('click', () => {
+  $('#text').value = 'Designator,Quantity,Comment,Footprint,MPN,LCSC\nR1,1,10k,0603,RC0603FR-0710KL,\nC1 C2,2,100nF,0603,GRM188R71C104KA01D,\nC3 C4,2,10uF,0603,CL10A106MQ8NNNC,\nU1,1,AMS1117-3.3,SOT-223,AMS1117-3.3,';
+});
+</script>
+</body>
+</html>
